@@ -193,14 +193,18 @@ export const BhapumaOrb: React.FC<BhapumaOrbProps> = ({
           {/* Internal core light ring */}
           <div className="absolute inset-2 rounded-full border border-white/15 backdrop-blur-sm pointer-events-none" />
           
-          {/* Center Brand Icon / Micro-Visualizer */}
+          {/* Center Brand Icon / Custom Avatar Micro-Visualizer */}
           <div className="relative z-10 flex flex-col items-center justify-center text-center">
-            <StatusIcon className={`w-8 h-8 ${statusInfo.color} mb-1 transition-transform group-hover:scale-110`} />
-            <span className="text-[11px] font-bold font-['Orbitron',sans-serif] tracking-widest text-white/90">
+            <div className="w-14 h-14 rounded-full border border-cyan-400/60 p-0.5 shadow-md shadow-cyan-500/30 overflow-hidden bg-zinc-900 mb-1 group-hover:scale-105 transition-transform duration-300">
+              <img 
+                src="https://i.postimg.cc/NM3bpncb/d4595745d5fa611b8f8da9861b2cf43d-0.webp" 
+                alt="BHAPUMA Avatar"
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-cover rounded-full"
+              />
+            </div>
+            <span className="text-[10px] font-bold font-mono tracking-widest text-cyan-200">
               BHAPUMA
-            </span>
-            <span className="text-[9px] text-cyan-300/80 font-medium">
-              भपुम
             </span>
           </div>
         </div>

@@ -35,7 +35,8 @@ import {
 import { getNaturalNepaliTime, getNaturalNepaliDate } from './utils/nepaliTime';
 import { speechEngine } from './utils/speechEngine';
 import { wakeWordDetector } from './utils/wakeWord';
-import { Volume2, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Volume2, Sparkles, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { App as CapApp } from '@capacitor/app';
 
 export default function App() {
   // Assistant States
@@ -85,8 +86,124 @@ export default function App() {
   const [showMemory, setShowMemory] = useState(false);
   const [showPermissions, setShowPermissions] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
+  const [exitToast, setExitToast] = useState(false);
+  const lastBackPressRef = useRef<number>(0);
 
   const conversationHistoryRef = useRef<{ role: string; content: string }[]>([]);
+
+  // Safe Android / PWA Back Button Action Handler
+  const handleBackAction = useCallback(() => {
+    // 1. If any modal is active, close it first without navigating away
+    if (activeApp) {
+      setActiveApp(null);
+      setAppQuery('');
+      return true;
+    }
+    if (smsData) {
+      setSmsData(null);
+      return true;
+    }
+    if (whatsAppData) {
+      setWhatsAppData(null);
+      return true;
+    }
+    if (emailData) {
+      setEmailData(null);
+      return true;
+    }
+    if (pendingCallContact || pendingCallNumber) {
+      setPendingCallContact(null);
+      setPendingCallNumber('');
+      return true;
+    }
+    if (showSettings) {
+      setShowSettings(false);
+      return true;
+    }
+    if (showMemory) {
+      setShowMemory(false);
+      return true;
+    }
+    if (showPermissions) {
+      setShowPermissions(false);
+      return true;
+    }
+    if (showAbout) {
+      setShowAbout(false);
+      return true;
+    }
+    if (telemetry.flashlightOn) {
+      setTelemetry((p) => ({ ...p, flashlightOn: false }));
+      setHardwareFlashlight(false);
+      return true;
+    }
+
+    // 2. Main screen: Prevent accidental exit on Home Screen / PWA (Double-Tap to Exit)
+    const now = Date.now();
+    if (now - lastBackPressRef.current < 2000) {
+      try {
+        CapApp.exitApp();
+      } catch {
+        // In web browser, allow normal close
+      }
+      return false;
+    } else {
+      lastBackPressRef.current = now;
+      setExitToast(true);
+      setTimeout(() => setExitToast(false), 2200);
+      return true;
+    }
+  }, [
+    activeApp,
+    smsData,
+    whatsAppData,
+    emailData,
+    pendingCallContact,
+    pendingCallNumber,
+    showSettings,
+    showMemory,
+    showPermissions,
+    showAbout,
+    telemetry.flashlightOn,
+  ]);
+
+  // Trap back navigation gestures in browser and Capacitor
+  useEffect(() => {
+    try {
+      window.history.replaceState({ page: 'bhapuma_root' }, '', window.location.href);
+      window.history.pushState({ page: 'bhapuma_active' }, '', window.location.href);
+    } catch (e) {
+      console.warn('History state setup warning:', e);
+    }
+
+    const onPopState = (e: PopStateEvent) => {
+      e.preventDefault();
+      const handled = handleBackAction();
+      if (handled) {
+        try {
+          window.history.pushState({ page: 'bhapuma_active' }, '', window.location.href);
+        } catch {}
+      }
+    };
+
+    window.addEventListener('popstate', onPopState);
+
+    let capBackButtonHandler: any = null;
+    try {
+      capBackButtonHandler = CapApp.addListener('backButton', () => {
+        handleBackAction();
+      });
+    } catch (e) {
+      console.warn('Capacitor backButton init non-fatal:', e);
+    }
+
+    return () => {
+      window.removeEventListener('popstate', onPopState);
+      if (capBackButtonHandler?.then) {
+        capBackButtonHandler.then((h: any) => h?.remove?.());
+      }
+    };
+  }, [handleBackAction]);
 
   // Update real-time clock & battery
   useEffect(() => {
@@ -706,6 +823,14 @@ export default function App() {
             window.open('https://avyan.app/u/bharat.pun.magar', '_blank');
           }}
         />
+      )}
+
+      {/* 14. Double-Tap Back Exit Toast for Android / Home Screen Protection */}
+      {exitToast && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 px-5 py-2.5 rounded-2xl bg-zinc-900/95 border border-cyan-500/40 text-cyan-300 text-xs font-semibold shadow-2xl backdrop-blur-lg flex items-center gap-2 animate-fadeIn">
+          <ArrowLeft className="w-4 h-4 text-cyan-400" />
+          <span>एप बन्द गर्न फेरि पछाडि थिच्नुहोस्</span>
+        </div>
       )}
     </div>
   );
