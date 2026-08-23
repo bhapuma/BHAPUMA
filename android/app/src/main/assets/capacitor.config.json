@@ -1,0 +1,12 @@
+{
+	"appId": "com.bhapuma.assistant",
+	"appName": "BHAPUMA",
+	"webDir": "dist",
+	"server": {
+		"androidScheme": "https",
+		"cleartext": true
+	},
+	"android": {
+		"allowMixedContent": true
+	}
+}

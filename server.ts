@@ -348,7 +348,7 @@ app.post("/api/assistant/chat", async (req, res) => {
     let response;
     try {
       response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.7-flash",
         contents: contents,
         config: {
           systemInstruction: BHAPUMA_SYSTEM_INSTRUCTION,
@@ -359,7 +359,7 @@ app.post("/api/assistant/chat", async (req, res) => {
     } catch (primaryErr: any) {
       console.warn("Primary Gemini model retry with safe config...", primaryErr?.message);
       response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.7-flash",
         contents: contents,
         config: {
           systemInstruction: BHAPUMA_SYSTEM_INSTRUCTION,
