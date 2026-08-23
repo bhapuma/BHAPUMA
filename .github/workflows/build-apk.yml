@@ -18,64 +18,64 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Verify Java environment
-        run: |
-          java -version
-          echo "JAVA_HOME: $JAVA_HOME"
-          JAVA_MAJOR=$(java -version 2>&1 | awk -F '"' '/version/ {print $2}' | awk -F '.' '{print $1}')
-          if [ -z "$JAVA_MAJOR" ]; then
-            echo "Error: Unable to detect Java major version."
-            exit 1
-          fi
-          if [ "$JAVA_MAJOR" -lt 17 ]; then
-            echo "Error: Java version must be 17 or higher. Detected: $JAVA_MAJOR"
-            exit 1
-          fi
-          echo "Java verification passed. Major version: $JAVA_MAJOR"
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
 
-      - name: Set up Gradle 9.3.1
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '9.3.1'
+      - name: Build Web Application
+        run: |
+          npm install
+          npx vite build
+
+      - name: Set up Capacitor Android Project
+        run: |
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+          npx cap init BHAPUMA com.bhapuma.assistant --web-dir dist
+          npx cap add android
+          
+          # Add necessary Android permissions for voice assistant, camera, flashlight, audio
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          if [ -f "$MANIFEST" ]; then
+            sed -i '/<application/i \    <uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.RECORD_AUDIO" />\n    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />\n    <uses-permission android:name="android.permission.CAMERA" />\n    <uses-permission android:name="android.permission.FLASHLIGHT" />\n    <uses-permission android:name="android.permission.VIBRATE" />\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />' "$MANIFEST"
+          fi
+          
+          npx cap sync android
 
       - name: Create temporary debug keystore
         run: |
-          if [ ! -f "./debug.keystore" ]; then
+          if [ ! -f "android/app/debug.keystore" ]; then
             echo "Generating temporary debug keystore..."
-            keytool -genkey -v -keystore ./debug.keystore -storepass android -alias androiddebugkey -keypass android -dname "CN=Android Debug,O=Android,C=US" -keyalg RSA -keysize 2048 -validity 10000
-          fi
-          if [ ! -f "./debug.keystore" ]; then
-            echo "Error: Failed to create ./debug.keystore"
-            exit 1
+            keytool -genkey -v -keystore android/app/debug.keystore -storepass android -alias androiddebugkey -keypass android -dname "CN=Android Debug,O=Android,C=US" -keyalg RSA -keysize 2048 -validity 10000
           fi
           echo "Debug keystore verified."
 
-      - name: Build Debug APK
+      - name: Build Debug APK with Gradle
+        working-directory: android
         run: |
-          gradle :app:assembleDebug --stacktrace --no-daemon
+          chmod +x ./gradlew
+          ./gradlew assembleDebug --stacktrace --no-daemon
 
       - name: Verify APK
         run: |
-          EXPECTED_APK="app/build/outputs/apk/debug/app-debug.apk"
-          if [ ! -f "$EXPECTED_APK" ]; then
-            echo "Error: Expected APK not found at $EXPECTED_APK"
-            echo "Discovered APK files inside app/build/outputs/apk:"
-            find app/build/outputs/apk -name "*.apk" -type f || true
+          mkdir -p app/build/outputs/apk/debug
+          FIND_APK=$(find android/app/build/outputs/apk/debug -name "*debug.apk" -type f | head -n 1)
+          if [ -z "$FIND_APK" ] || [ ! -f "$FIND_APK" ]; then
+            echo "Error: Debug APK was not generated."
+            find android/app/build/outputs -type f || true
             exit 1
           fi
-
-          if [ ! -s "$EXPECTED_APK" ]; then
-            echo "Error: APK file is empty."
-            exit 1
-          fi
-
-          echo "APK successfully verified at $EXPECTED_APK"
+          cp "$FIND_APK" app/build/outputs/apk/debug/app-debug.apk
+          echo "APK successfully verified at app/build/outputs/apk/debug/app-debug.apk"
 
       - name: Upload debug APK artifact
         uses: actions/upload-artifact@v4
@@ -89,7 +89,7 @@ jobs:
         run: |
           TEMP_DIR=$(mktemp -d)
           REPO_CLEAN=$(echo "${{ github.event.repository.name }}" | sed 's/[^a-zA-Z0-9._-]/-/g')
-          ASSET_NAME="${REPO_CLEAN}-debug-build-${{ github.run_number }}.apk"
+          ASSET_NAME="${REPO_CLEAN:-BHAPUMA}-debug-build-${{ github.run_number }}.apk"
           ASSET_PATH="${TEMP_DIR}/${ASSET_NAME}"
           cp app/build/outputs/apk/debug/app-debug.apk "$ASSET_PATH"
 
@@ -116,14 +116,21 @@ jobs:
           fi
 
           RELEASE_TAG="debug-apk-build-${{ github.run_number }}-${{ github.run_attempt }}"
-          RELEASE_TITLE="Debug APK Build #${{ github.run_number }}"
+          RELEASE_TITLE="BHAPUMA AI Assistant Debug APK #${{ github.run_number }}"
 
-          NOTES="### BHAPUMA Android Assistant - Debug APK Build
-          - **Build Type**: Automatically generated debug APK
-          - **Builder**: GitHub Actions
-          - **Run Number**: #${{ github.run_number }} (Attempt ${{ github.run_attempt }})
-          - **Source Commit**: ${{ github.sha }}
-          - **Note**: This APK is signed with a debug keystore for testing purposes."
+          NOTES="### 🚀 BHAPUMA AI Assistant - Android APK Release
+- **App Name**: BHAPUMA AI Voice & System Assistant
+- **Developer Profile**: Bharat Pun Magar (AVYAN: avyan.app/u/bharat.pun.magar)
+- **Official Email**: bhapuma.official@gmail.com
+- **Build Type**: Automatically generated Android Debug APK
+- **Workflow Run**: #${{ github.run_number }} (Attempt ${{ github.run_attempt }})
+- **Commit SHA**: ${{ github.sha }}
+
+#### 📲 How to Install on Android Phone:
+1. Download the \`.apk\` file from the **Assets** section below.
+2. Tap the downloaded file on your Android device.
+3. Allow *'Install from unknown sources'* if prompted.
+4. Open **BHAPUMA** and enjoy continuous voice AI, flashlight, system tools & Nepali AI assistant!"
 
           gh release create "$RELEASE_TAG" "$ASSET_PATH" \
             --title "$RELEASE_TITLE" \
@@ -143,7 +150,7 @@ jobs:
             echo "- **Release Tag:** \`$RELEASE_TAG\`" >> $GITHUB_STEP_SUMMARY
             echo "- **APK Asset:** \`${{ steps.prepare_asset.outputs.asset_name }}\`" >> $GITHUB_STEP_SUMMARY
             if [ -n "$RELEASE_URL" ]; then
-              echo "- **Download URL:** [Direct GitHub Release Page]($RELEASE_URL)" >> $GITHUB_STEP_SUMMARY
+              echo "- **Direct Download Release Page:** [Open GitHub Release Page]($RELEASE_URL)" >> $GITHUB_STEP_SUMMARY
             fi
             echo "You can download the \`.apk\` directly onto your Android phone from the GitHub Release Assets section." >> $GITHUB_STEP_SUMMARY
             echo "A backup copy is also preserved in GitHub Actions Artifacts (\`app-debug-apk\`)." >> $GITHUB_STEP_SUMMARY
