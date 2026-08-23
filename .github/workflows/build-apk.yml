@@ -9,17 +9,18 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
-  build:
+  build-and-release:
     name: Build Android APK
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up Node.js 20
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -30,108 +31,101 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Build Web App
+      - name: Install All Dependencies
         run: |
           npm install --legacy-peer-deps
-          npm run build
 
-      - name: Initialize & Sync Android via Capacitor
+      - name: Compile Web Frontend
         run: |
-          # Install capacitor dependencies
-          npm install --save @capacitor/core @capacitor/cli @capacitor/android --legacy-peer-deps
-          
-          # Create capacitor config
+          npx vite build
+
+      - name: Setup Capacitor & Android Platform
+        run: |
+          # Write capacitor config
           cat << 'EOF' > capacitor.config.json
           {
             "appId": "com.bhapuma.assistant",
             "appName": "BHAPUMA",
-            "webDir": "dist",
-            "server": {
-              "androidScheme": "https",
-              "cleartext": true
-            }
+            "webDir": "dist"
           }
           EOF
-          
-          # Add android platform
+
+          # Add platform and sync web assets
           npx cap add android || true
-          
-          # Sync assets
           npx cap sync android
-          
-          # Grant execution permissions
+
+          # Make gradlew executable
           chmod +x android/gradlew
 
-      - name: Build Debug APK with Gradle
+      - name: Build Android Debug APK
+        working-directory: android
         run: |
-          cd android
           ./gradlew assembleDebug --no-daemon
 
-      - name: Prepare APK Asset
-        id: prepare_apk
+      - name: Collect Generated APK
+        id: get_apk
         run: |
-          mkdir -p release_out
-          APK_FOUND=$(find android/app/build/outputs/apk/debug -name "*.apk" -type f | head -n 1)
-          if [ -z "$APK_FOUND" ]; then
-            APK_FOUND=$(find android -name "*.apk" -type f | head -n 1)
+          mkdir -p apk_output
+          APK_FILE=$(find android/app/build/outputs/apk/debug -name "*.apk" -type f | head -n 1)
+          if [ -z "$APK_FILE" ]; then
+            APK_FILE=$(find android -name "*.apk" -type f | head -n 1)
           fi
-          
-          if [ -z "$APK_FOUND" ] || [ ! -f "$APK_FOUND" ]; then
-            echo "ERROR: APK file could not be found!"
-            find . -name "*.apk" || true
+
+          if [ -z "$APK_FILE" ] || [ ! -f "$APK_FILE" ]; then
+            echo "::error::No APK file produced by Gradle build!"
             exit 1
           fi
-          
-          APK_NAME="BHAPUMA-AI-Assistant-v${{ github.run_number }}.apk"
-          cp "$APK_FOUND" "release_out/${APK_NAME}"
-          echo "apk_path=release_out/${APK_NAME}" >> "$GITHUB_OUTPUT"
-          echo "apk_name=${APK_NAME}" >> "$GITHUB_OUTPUT"
-          echo "Prepared APK: release_out/${APK_NAME} ($(du -h "$APK_FOUND" | cut -f1))"
 
-      - name: Upload Debug APK to GitHub Actions Artifacts
+          APK_NAME="BHAPUMA-AI-Assistant-v${{ github.run_number }}.apk"
+          cp "$APK_FILE" "apk_output/${APK_NAME}"
+          echo "apk_path=apk_output/${APK_NAME}" >> "$GITHUB_OUTPUT"
+          echo "apk_name=${APK_NAME}" >> "$GITHUB_OUTPUT"
+          echo "APK ready at: apk_output/${APK_NAME}"
+
+      - name: Upload APK to GitHub Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: BHAPUMA-Android-APK
-          path: ${{ steps.prepare_apk.outputs.apk_path }}
+          path: ${{ steps.get_apk.outputs.apk_path }}
           if-no-files-found: error
           retention-days: 30
 
-      - name: Create GitHub Release
-        id: release
+      - name: Create or Update GitHub Release
+        id: create_release
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           RELEASE_TAG="v1.0.${{ github.run_number }}"
-          RELEASE_TITLE="BHAPUMA AI Voice Assistant v1.0.${{ github.run_number }}"
-          APK_FILE="${{ steps.prepare_apk.outputs.apk_path }}"
-          
-          RELEASE_NOTES="## 🤖 BHAPUMA AI Voice & System Assistant (Android)
+          RELEASE_TITLE="BHAPUMA AI Assistant v1.0.${{ github.run_number }}"
+          APK_PATH="${{ steps.get_apk.outputs.apk_path }}"
+
+          NOTES="## 🤖 BHAPUMA AI Assistant (Android APK)
 
 **Build Number:** #${{ github.run_number }}
-**Developer:** Bharat Pun Magar ([AVYAN: avyan.app/u/bharat.pun.magar](https://avyan.app/u/bharat.pun.magar))
-**Contact Email:** bhapuma.official@gmail.com
+**Developer:** Bharat Pun Magar ([AVYAN Profile](https://avyan.app/u/bharat.pun.magar))
+**Contact:** bhapuma.official@gmail.com
 
 ---
 
-### 📲 Mobile Download & Installation:
-1. Scroll down to the **Assets** section below.
-2. Tap on **\`${{ steps.prepare_apk.outputs.apk_name }}\`** to download.
-3. Open the APK on your Android device and tap Install (*Allow 'Install from unknown sources'*).
-4. Launch **BHAPUMA** and speak in Nepali!"
+### 📲 Mobile Download Instructions:
+1. Tap on **\`${{ steps.get_apk.outputs.apk_name }}\`** in the **Assets** section below.
+2. Once downloaded on your Android device, tap to install.
+3. Allow **'Install from unknown sources'** if prompted.
+4. Open **BHAPUMA**!"
 
-          gh release create "$RELEASE_TAG" "$APK_FILE" \
+          gh release create "$RELEASE_TAG" "$APK_PATH" \
             --title "$RELEASE_TITLE" \
-            --notes "$RELEASE_NOTES" \
-            --latest
+            --notes "$NOTES" \
+            --latest || gh release upload "$RELEASE_TAG" "$APK_PATH" --clobber
 
-      - name: Workflow Execution Summary
+      - name: Publish Summary to Actions Step Summary
         if: always()
         run: |
-          echo "## 🚀 BHAPUMA Android Build Status" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ steps.prepare_apk.outcome }}" = "success" ]; then
-            echo "✅ **Debug APK is Ready for Download!**" >> $GITHUB_STEP_SUMMARY
-            echo "- **APK Filename:** \`${{ steps.prepare_apk.outputs.apk_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "## 🚀 BHAPUMA Android Build Summary" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.get_apk.outcome }}" = "success" ]; then
+            echo "✅ **Debug APK is Ready!**" >> $GITHUB_STEP_SUMMARY
+            echo "- **Filename:** \`${{ steps.get_apk.outputs.apk_name }}\`" >> $GITHUB_STEP_SUMMARY
             echo "- **Actions Artifact:** Download \`BHAPUMA-Android-APK\` from the summary above." >> $GITHUB_STEP_SUMMARY
           else
             echo "❌ **Build failed during compilation.**" >> $GITHUB_STEP_SUMMARY
