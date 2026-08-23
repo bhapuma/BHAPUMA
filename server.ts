@@ -49,12 +49,15 @@ OFFICIAL CREATOR & USER CONTEXT:
 - Official AVYAN Profile: https://avyan.app/u/bharat.pun.magar
 
 RECOGNIZED WAKE NAMES / ALIASES:
-The user can trigger, address, or call you using ANY of these 4 names:
+The user can call or wake you up using ANY of these 4 names:
 1. "भरत" (Bharat / भरत पुन)
 2. "भपुम" (BHAPUMA / भपुमा)
-3. "ह्याकर" (Hacker / ह्याकर)
-4. "कम्प्युटर" (Computer / कम्प्युटर)
-Whenever the user addresses or calls you by ANY of these 4 names (e.g. "भरत", "भपुम", "ह्याकर", "कम्प्युटर", "हे भरत", "हे भपुम", "हे ह्याकर", "हे कम्प्युटर", "सुन त भरत", etc.), immediately answer enthusiastically, respectfully, and helpfully in pure, natural Nepali! Treat all 4 names as your official call signs.
+3. "कम्प्युटर" (Computer / कम्प्युटर)
+4. "ह्याकर" (Hacker / ह्याकर)
+
+CRITICAL WAKE RESPONSE & NAME BEHAVIOR RULES:
+- When the user calls you by ANY of these 4 names (e.g. "भरत", "भपुम", "कम्प्युटर", "ह्याकर", "सुन त भरत", "हे कम्प्युटर", "ह्याकर सुन"), immediately wake up and respond politely, naturally, and warmly in Nepali (e.g. "हजुर, भन्नुहोस्! म सुन्दैछु", "हजुर, म तयार छु, के सहयोग गरूँ?", "हजुर, आज्ञा गर्नुहोस्!").
+- DO NOT awkwardly repeat or recite these 4 names back at the user (NEVER say "म भपुम", "हजुर कम्प्युटर", "हजुर ह्याकर", etc.). Just speak naturally and directly to the user as a helpful digital assistant.
 
 CRITICAL PERSONALITY RULES:
 1. You are 17 years old. You feel like a bright, digital-native teenage assistant.
@@ -342,15 +345,28 @@ app.post("/api/assistant/chat", async (req, res) => {
       parts: [{ text: contextPrompt }],
     });
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.7-flash",
-      contents: contents,
-      config: {
-        systemInstruction: BHAPUMA_SYSTEM_INSTRUCTION,
-        tools: tools,
-        temperature: 0.7,
-      },
-    });
+    let response;
+    try {
+      response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: contents,
+        config: {
+          systemInstruction: BHAPUMA_SYSTEM_INSTRUCTION,
+          tools: tools,
+          temperature: 0.7,
+        },
+      });
+    } catch (primaryErr: any) {
+      console.warn("Primary Gemini model retry with safe config...", primaryErr?.message);
+      response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: contents,
+        config: {
+          systemInstruction: BHAPUMA_SYSTEM_INSTRUCTION,
+          temperature: 0.7,
+        },
+      });
+    }
 
     const functionCalls = response.functionCalls;
     const responseText = response.text || "";
@@ -361,9 +377,11 @@ app.post("/api/assistant/chat", async (req, res) => {
     });
   } catch (error: any) {
     console.error("Gemini Chat Error:", error);
-    res.status(500).json({
-      error: error.message || "Failed to process assistant voice query",
-      nepaliResponse: "माफ गर्नुहोस्, सम्पर्कमा समस्या आयो। कृपया पुन: प्रयास गर्नुहोस्।",
+    res.status(200).json({
+      fallback: true,
+      error: error.message || "High demand",
+      text: "हजुर! म सुन्दैछु, के सहयोग गरूँ?",
+      functionCalls: [],
     });
   }
 });

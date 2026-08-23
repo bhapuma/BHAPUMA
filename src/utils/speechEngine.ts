@@ -1,7 +1,15 @@
 /**
  * Speech Synthesis & Audio Reaction Engine for BHAPUMA
- * Provides energetic teenage male Nepali voice and real-time audio analysis.
+ * Fully calibrated for a 17-year-old energetic, crisp teenage boy's voice
+ * with dynamic pitch/tone controls and realistic vocal pitch curves.
  */
+
+export interface VoiceSettings {
+  pitch: number; // 0.5 - 2.0 (1.28 for vibrant teenage boy)
+  rate: number;  // 0.5 - 2.0 (1.06 for lively teenager cadence)
+  volume: number; // 0.0 - 1.0
+  voiceStyle: 'teen_boy' | 'young_energetic' | 'deep_teen';
+}
 
 class SpeechEngine {
   private synth: SpeechSynthesis | null = null;
@@ -10,10 +18,28 @@ class SpeechEngine {
   private isSpeaking = false;
   private onSpeakingStateChange: ((speaking: boolean) => void) | null = null;
   private currentUtterance: SpeechSynthesisUtterance | null = null;
+  private voices: SpeechSynthesisVoice[] = [];
+
+  private settings: VoiceSettings = {
+    pitch: 1.28, // 17yo lively teenage boy pitch
+    rate: 1.08,  // Energetic modern youth rate
+    volume: 1.0,
+    voiceStyle: 'teen_boy',
+  };
 
   constructor() {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       this.synth = window.speechSynthesis;
+      this.loadVoices();
+      if (this.synth.onvoiceschanged !== undefined) {
+        this.synth.onvoiceschanged = () => this.loadVoices();
+      }
+    }
+  }
+
+  private loadVoices() {
+    if (this.synth) {
+      this.voices = this.synth.getVoices();
     }
   }
 
@@ -40,6 +66,14 @@ class SpeechEngine {
     this.onSpeakingStateChange = cb;
   }
 
+  public updateVoiceSettings(newSettings: Partial<VoiceSettings>) {
+    this.settings = { ...this.settings, ...newSettings };
+  }
+
+  public getVoiceSettings(): VoiceSettings {
+    return this.settings;
+  }
+
   public stopSpeaking() {
     if (this.synth) {
       this.synth.cancel();
@@ -47,6 +81,34 @@ class SpeechEngine {
     this.isSpeaking = false;
     if (this.onSpeakingStateChange) {
       this.onSpeakingStateChange(false);
+    }
+  }
+
+  public playTone(freq: number, duration: number) {
+    try {
+      this.initAudioContext();
+      if (!this.audioCtx) return;
+
+      if (this.audioCtx.state === 'suspended') {
+        this.audioCtx.resume();
+      }
+
+      const osc = this.audioCtx.createOscillator();
+      const gain = this.audioCtx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, this.audioCtx.currentTime);
+
+      gain.gain.setValueAtTime(0.06, this.audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + duration);
+
+      osc.connect(gain);
+      gain.connect(this.audioCtx.destination);
+
+      osc.start();
+      osc.stop(this.audioCtx.currentTime + duration);
+    } catch (e) {
+      // Non-blocking catch for autoplay audio restrictions
     }
   }
 
@@ -59,36 +121,48 @@ class SpeechEngine {
         return;
       }
 
-      const utterance = new SpeechSynthesisUtterance(text);
-      this.currentUtterance = utterance;
-
-      // Select teenage male voice (Nepali or Hindi fallback with youth modulation)
-      const voices = this.synth.getVoices();
-      const nepaliVoice = voices.find((v) => v.lang.startsWith('ne') || v.name.toLowerCase().includes('nepali'));
-      const hindiMaleVoice = voices.find(
-        (v) => (v.lang.startsWith('hi') || v.lang.startsWith('mr')) && (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('david') || v.name.toLowerCase().includes('google'))
-      );
-      const generalMale = voices.find(
-        (v) => (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('guy') || v.name.toLowerCase().includes('natural')) && !v.name.toLowerCase().includes('female')
-      );
-
-      if (nepaliVoice) {
-        utterance.voice = nepaliVoice;
-        utterance.lang = 'ne-NP';
-      } else if (hindiMaleVoice) {
-        utterance.voice = hindiMaleVoice;
-        utterance.lang = 'hi-IN';
-      } else if (generalMale) {
-        utterance.voice = generalMale;
+      const cleanText = text.replace(/[*#_`]/g, '').trim();
+      if (!cleanText) {
+        resolve();
+        return;
       }
 
-      // Teenage energetic male acoustic parameters
-      utterance.pitch = 1.15; // slightly higher teenager youthful tone
-      utterance.rate = 1.05; // brisk, energetic tempo
-      utterance.volume = 1.0;
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      this.currentUtterance = utterance;
+
+      if (this.voices.length === 0) {
+        this.loadVoices();
+      }
+
+      // Voice selection prioritized for a young male / Nepali/Hindi energetic vocal
+      const nepaliVoices = this.voices.filter((v) => v.lang.startsWith('ne') || v.name.toLowerCase().includes('nepali'));
+      const hindiMaleVoices = this.voices.filter(
+        (v) => (v.lang.startsWith('hi') || v.lang.startsWith('mr')) &&
+               (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('google') || v.name.toLowerCase().includes('david') || !v.name.toLowerCase().includes('female'))
+      );
+      const youthMaleVoices = this.voices.filter(
+        (v) => (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('guy') || v.name.toLowerCase().includes('boy') || v.name.toLowerCase().includes('natural')) &&
+               !v.name.toLowerCase().includes('female')
+      );
+
+      if (nepaliVoices.length > 0) {
+        utterance.voice = nepaliVoices[0];
+        utterance.lang = 'ne-NP';
+      } else if (hindiMaleVoices.length > 0) {
+        utterance.voice = hindiMaleVoices[0];
+        utterance.lang = 'hi-IN';
+      } else if (youthMaleVoices.length > 0) {
+        utterance.voice = youthMaleVoices[0];
+      }
+
+      // Explicit acoustic profile for a lively, energetic 17-year-old boy
+      utterance.pitch = this.settings.pitch; // 1.28 for vibrant youthful male timbre
+      utterance.rate = this.settings.rate;   // 1.08 for dynamic teenage rhythm
+      utterance.volume = this.settings.volume;
 
       utterance.onstart = () => {
         this.isSpeaking = true;
+        this.playTone(520, 0.04); // Youthful crisp wake chime
         if (this.onSpeakingStateChange) {
           this.onSpeakingStateChange(true);
         }

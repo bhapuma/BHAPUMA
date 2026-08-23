@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   X,
   Volume2,
@@ -6,12 +6,13 @@ import {
   Wifi,
   WifiOff,
   Flashlight,
-  Radio,
-  Sparkles,
-  Shield,
   Sliders,
+  User,
+  Mic,
+  Volume1,
 } from 'lucide-react';
 import { DeviceTelemetry } from '../types';
+import { speechEngine, VoiceSettings } from '../utils/speechEngine';
 
 interface SettingsModalProps {
   telemetry: DeviceTelemetry;
@@ -28,13 +29,31 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onToggleOffline,
   onClose,
 }) => {
+  const [voiceSettings, setVoiceSettings] = useState<VoiceSettings>(speechEngine.getVoiceSettings());
+
+  const handlePitchChange = (pitch: number) => {
+    const updated = { ...voiceSettings, pitch };
+    setVoiceSettings(updated);
+    speechEngine.updateVoiceSettings({ pitch });
+  };
+
+  const handleRateChange = (rate: number) => {
+    const updated = { ...voiceSettings, rate };
+    setVoiceSettings(updated);
+    speechEngine.updateVoiceSettings({ rate });
+  };
+
+  const testTeenagerVoice = () => {
+    speechEngine.speak('नमस्ते भरत दाजु! म भपुम, तपाईंको स्मार्ट एआई भ्वाइस असिस्टेन्ट तयार छु!');
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn select-none">
-      <div className="w-full max-w-md rounded-3xl bg-[#090a10] border border-cyan-500/30 p-6 shadow-2xl relative">
+      <div className="w-full max-w-md rounded-3xl bg-[#090a10] border border-cyan-500/30 p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-4">
           <div className="flex items-center gap-2 text-cyan-400">
             <Sliders className="w-5 h-5" />
-            <h2 className="text-base font-bold text-white">BHAPUMA यन्त्र नियन्त्रण (Settings)</h2>
+            <h2 className="text-base font-bold text-white">BHAPUMA सेटिङ (Settings)</h2>
           </div>
           <button onClick={onClose} className="p-1 text-zinc-400 hover:text-white">
             <X className="w-5 h-5" />
@@ -42,6 +61,57 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         </div>
 
         <div className="space-y-4">
+          {/* Teenager Boy Voice Settings Section */}
+          <div className="p-3.5 rounded-2xl bg-cyan-950/20 border border-cyan-500/30">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2 text-sm font-bold text-cyan-300">
+                <User className="w-4 h-4 text-cyan-400" />
+                <span>१७ वर्षे किशोर आवाज (Teenager Boy Voice)</span>
+              </div>
+              <button
+                onClick={testTeenagerVoice}
+                className="px-2.5 py-1 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-bold flex items-center gap-1 shadow-md shadow-cyan-500/20 transition-all active:scale-95"
+              >
+                <Volume1 className="w-3.5 h-3.5" />
+                <span>आवाज सुन्नुहोस्</span>
+              </button>
+            </div>
+
+            {/* Pitch Controller */}
+            <div className="mb-3">
+              <div className="flex items-center justify-between text-xs text-zinc-300 mb-1.5">
+                <span>आवाजको तिखोपन (Youth Pitch)</span>
+                <span className="font-mono text-cyan-400 font-bold">{voiceSettings.pitch.toFixed(2)}x</span>
+              </div>
+              <input
+                type="range"
+                min="0.8"
+                max="1.6"
+                step="0.05"
+                value={voiceSettings.pitch}
+                onChange={(e) => handlePitchChange(parseFloat(e.target.value))}
+                className="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-cyan-400"
+              />
+            </div>
+
+            {/* Speaking Rate / Speed */}
+            <div>
+              <div className="flex items-center justify-between text-xs text-zinc-300 mb-1.5">
+                <span>बोल्ने गति (Speaking Speed)</span>
+                <span className="font-mono text-cyan-400 font-bold">{voiceSettings.rate.toFixed(2)}x</span>
+              </div>
+              <input
+                type="range"
+                min="0.8"
+                max="1.4"
+                step="0.05"
+                value={voiceSettings.rate}
+                onChange={(e) => handleRateChange(parseFloat(e.target.value))}
+                className="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-cyan-400"
+              />
+            </div>
+          </div>
+
           {/* Media Volume Slider */}
           <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/5">
             <div className="flex items-center justify-between mb-2">
@@ -90,7 +160,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </button>
           </div>
 
-          {/* Offline / Online Mode Simulation */}
+          {/* Offline / Online Mode */}
           <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               {telemetry.isOnline ? (
@@ -101,7 +171,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div>
                 <div className="text-sm font-semibold text-white">नेटवर्क स्थिति (Network Mode)</div>
                 <div className="text-xs text-zinc-400">
-                  {telemetry.isOnline ? 'Online (Gemini Live Mode)' : 'Offline (Local Commands Mode)'}
+                  {telemetry.isOnline ? 'Online (Gemini Flash Mode)' : 'Offline (Local Commands Mode)'}
                 </div>
               </div>
             </div>
@@ -115,14 +185,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             >
               {telemetry.isOnline ? 'Go Offline' : 'Go Online'}
             </button>
-          </div>
-
-          {/* Assistant Info Banner */}
-          <div className="p-3 rounded-2xl bg-cyan-950/30 border border-cyan-500/20 flex items-start gap-2.5">
-            <Sparkles className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
-            <p className="text-xs text-cyan-200/90 leading-relaxed">
-              BHAPUMA ले आवाज पहिचान गर्न र उपकरणका कार्यहरू (कल, एप, भोल्युम, टर्च) स्वचालित रूपमा कार्यान्वयन गर्न वास्तविक एन्ड्रोइड इन्टेन्ट्स प्रयोग गर्छ।
-            </p>
           </div>
         </div>
 

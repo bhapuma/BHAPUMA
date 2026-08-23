@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build and Release Android APK
 
 on:
   push:
@@ -7,10 +7,15 @@ on:
       - master
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build Android APK
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout Code
@@ -31,7 +36,7 @@ jobs:
         run: |
           npm install --legacy-peer-deps
 
-      - name: Build Web Dist
+      - name: Build Web Application
         run: |
           npx vite build
 
@@ -41,7 +46,11 @@ jobs:
           {
             "appId": "com.bhapuma.assistant",
             "appName": "BHAPUMA",
-            "webDir": "dist"
+            "webDir": "dist",
+            "server": {
+              "androidScheme": "https",
+              "cleartext": true
+            }
           }
           EOF
           npx cap add android || true
@@ -53,24 +62,25 @@ jobs:
         run: |
           ./gradlew assembleDebug --no-daemon
 
-      - name: Locate APK File
+      - name: Locate & Package APK File
         id: find_apk
         run: |
           mkdir -p build_output
-          APK_PATH=$(find android/app/build/outputs/apk/debug -type f -name "*.apk" | head -n 1)
+          APK_PATH=$(find android/app/build/outputs/apk/debug -name "*.apk" -type f | head -n 1)
           if [ -z "$APK_PATH" ]; then
-            APK_PATH=$(find android -type f -name "*.apk" | head -n 1)
+            APK_PATH=$(find android -name "*.apk" -type f | head -n 1)
           fi
           if [ -z "$APK_PATH" ]; then
-            echo "Error: APK not found"
+            echo "::error::No APK file found after gradle build!"
             exit 1
           fi
-          APK_NAME="BHAPUMA-AI-Assistant.apk"
+          APK_NAME="BHAPUMA-AI-Assistant-v${{ github.run_number }}.apk"
           cp "$APK_PATH" "build_output/${APK_NAME}"
           echo "apk_path=build_output/${APK_NAME}" >> "$GITHUB_OUTPUT"
           echo "apk_name=${APK_NAME}" >> "$GITHUB_OUTPUT"
+          echo "Found APK at build_output/${APK_NAME}"
 
-      - name: Upload APK as Artifact
+      - name: Upload APK to Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: BHAPUMA-AI-Assistant-APK
@@ -78,12 +88,27 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Publish GitHub Release
-        continue-on-error: true
+      - name: Publish to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "v1.0.${{ github.run_number }}"
+          name: "BHAPUMA AI Assistant v1.0.${{ github.run_number }}"
+          body: |
+            ## 🤖 BHAPUMA AI Voice Assistant (Official Android APK)
+
+            **Build:** Run #${{ github.run_number }}
+            **Developer:** Bharat Pun Magar ([AVYAN Profile](https://avyan.app/u/bharat.pun.magar))
+            **Official Email:** bhapuma.official@gmail.com
+
+            ---
+
+            ### 📲 How to Download & Install on Android:
+            1. Tap on **`${{ steps.find_apk.outputs.apk_name }}`** under the **Assets** section below.
+            2. Open the downloaded file on your Android mobile.
+            3. If prompted, allow **'Install from unknown sources'**.
+            4. Open **BHAPUMA** and speak in Nepali (*'भरत'*, *'भपुम'*, *'ह्याकर'*, *'कम्प्युटर'*).
+          files: ${{ steps.find_apk.outputs.apk_path }}
+          draft: false
+          prerelease: false
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release create "v1.0.${{ github.run_number }}" "${{ steps.find_apk.outputs.apk_path }}" \
-            --title "BHAPUMA AI Assistant v1.0.${{ github.run_number }}" \
-            --notes "Android APK for BHAPUMA AI Assistant" \
-            --latest || echo "Release creation skipped or succeeded"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

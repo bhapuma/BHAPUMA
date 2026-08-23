@@ -346,34 +346,11 @@ export function parseLocalOfflineCommand(
       lower.includes('कस्तो छ'));
 
   if (isDirectCall) {
-    if (lower.includes('भरत') || lower.includes('bharat')) {
-      return {
-        handled: true,
-        nepaliResponse: 'हजुर, भन्नुहोस् भरत! म सुन्दैछु, के सहयोग गरूँ?',
-        action: 'wake_bharat',
-      };
-    }
-    if (lower.includes('भपुम') || lower.includes('bhapuma') || lower.includes('bhapum')) {
-      return {
-        handled: true,
-        nepaliResponse: 'हजुर, म भपुम! भन्नुहोस्, म तपाईंको के सेवा गरूँ?',
-        action: 'wake_bhapuma',
-      };
-    }
-    if (lower.includes('ह्याकर') || lower.includes('hacker') || lower.includes('hyakar')) {
-      return {
-        handled: true,
-        nepaliResponse: 'हजुर ह्याकर! सिस्टम पूर्ण रूपमा अनलाइन र तयार छ, भन्नुहोस्!',
-        action: 'wake_hacker',
-      };
-    }
-    if (lower.includes('कम्प्युटर') || lower.includes('computer') || lower.includes('kampyutar')) {
-      return {
-        handled: true,
-        nepaliResponse: 'हजुर कम्प्युटर! म तयार छु, के कमाण्ड दिनुहुन्छ?',
-        action: 'wake_computer',
-      };
-    }
+    return {
+      handled: true,
+      nepaliResponse: 'हजुर, भन्नुहोस्! म सुन्दैछु, के सहयोग गरूँ?',
+      action: 'wake_assistant',
+    };
   }
 
   // Battery status

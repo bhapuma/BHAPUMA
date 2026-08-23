@@ -448,19 +448,32 @@ export default function App() {
     });
   }, [processUserQuery]);
 
-  // Toggle Assistant Mic
+  // Toggle Assistant Mic (Safe, crash-proof handler)
   const handleToggleMic = async () => {
-    speechEngine.initAudioContext();
-    if (isListening) {
-      setIsListening(false);
-      setAssistantState('IDLE');
-      wakeWordDetector.stopListening();
-    } else {
-      setIsListening(true);
-      setAssistantState('LISTENING');
-      wakeWordDetector.startListening();
-      const analyser = await wakeWordDetector.startMicrophoneCapture();
-      setAnalyserNode(analyser);
+    try {
+      try {
+        speechEngine.initAudioContext();
+      } catch (e) {
+        console.warn('AudioContext init non-fatal:', e);
+      }
+
+      if (isListening) {
+        setIsListening(false);
+        setAssistantState('IDLE');
+        wakeWordDetector.stopListening();
+      } else {
+        setIsListening(true);
+        setAssistantState('LISTENING');
+        wakeWordDetector.startListening();
+        try {
+          const analyser = await wakeWordDetector.startMicrophoneCapture();
+          setAnalyserNode(analyser);
+        } catch (err) {
+          console.warn('Microphone stream non-fatal warning:', err);
+        }
+      }
+    } catch (err) {
+      console.warn('handleToggleMic error caught safely:', err);
     }
   };
 
