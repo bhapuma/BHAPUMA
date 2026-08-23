@@ -1,0 +1,6 @@
+{
+  "name": "BHAPUMA Assistant",
+  "description": "Advanced Android AI Voice Assistant powered by Gemini with Nepali speech, wake-word engine, device automation tools, and holographic orb interface.",
+  "requestFramePermissions": ["microphone", "camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
