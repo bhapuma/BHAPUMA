@@ -3,6 +3,7 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from "dotenv";
+import { getGitStatus, pushProjectToGitHub, disconnectGitHub } from "./src/utils/githubService";
 
 dotenv.config();
 
@@ -444,6 +445,73 @@ app.post("/api/assistant/tts", async (req, res) => {
   } catch (error: any) {
     console.warn("Gemini TTS fallback:", error.message);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// ==========================================
+// Full GitHub Integration & Push Endpoints
+// ==========================================
+
+// 1. Get current Git & GitHub status
+app.get("/api/github/status", async (req, res) => {
+  try {
+    const status = await getGitStatus();
+    res.json({
+      success: true,
+      status,
+    });
+  } catch (error: any) {
+    console.error("Git Status Error:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message || "Failed to retrieve Git status",
+    });
+  }
+});
+
+// 2. Commit & Push full Android project to GitHub repository
+app.post("/api/github/push", async (req, res) => {
+  try {
+    const { repoUrl, branch = "main", commitMessage, token, authorName, authorEmail } = req.body;
+
+    if (!repoUrl) {
+      res.status(400).json({
+        success: false,
+        error: "GitHub Repository URL or 'owner/repo' is required.",
+      });
+      return;
+    }
+
+    const result = await pushProjectToGitHub({
+      repoUrl,
+      branch,
+      commitMessage,
+      token,
+      authorName,
+      authorEmail,
+    });
+
+    res.json(result);
+  } catch (error: any) {
+    console.error("Git Push Error:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message || "Failed to push project to GitHub repository",
+    });
+  }
+});
+
+// 3. Disconnect / Switch GitHub repository
+app.post("/api/github/disconnect", async (req, res) => {
+  try {
+    const result = await disconnectGitHub();
+    res.json(result);
+  } catch (error: any) {
+    console.error("Git Disconnect Error:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message || "Failed to disconnect GitHub repository",
+    });
   }
 });
 

@@ -64,3 +64,17 @@ export interface ToolCallExecution {
   status: "pending" | "success" | "failed" | "confirmation_required";
   nepaliSummary: string;
 }
+
+export interface GitHubStatusInfo {
+  isGitInitialized: boolean;
+  currentRemote: string | null;
+  currentBranch: string | null;
+  hasUncommittedChanges: boolean;
+  lastCommitMessage: string | null;
+  lastCommitDate: string | null;
+  lastPushDate: string | null;
+  lastPushStatus: "idle" | "success" | "failed";
+  lastPushMessage: string | null;
+  connectedRepoName: string | null;
+}
+

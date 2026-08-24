@@ -13,6 +13,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { MemoryModal } from './components/MemoryModal';
 import { PermissionsModal } from './components/PermissionsModal';
 import { AboutModal } from './components/AboutModal';
+import { GitHubModal } from './components/GitHubModal';
 
 import {
   AssistantState,
@@ -86,6 +87,7 @@ export default function App() {
   const [showMemory, setShowMemory] = useState(false);
   const [showPermissions, setShowPermissions] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
+  const [showGitHub, setShowGitHub] = useState(false);
   const [exitToast, setExitToast] = useState(false);
   const lastBackPressRef = useRef<number>(0);
 
@@ -114,6 +116,10 @@ export default function App() {
     if (pendingCallContact || pendingCallNumber) {
       setPendingCallContact(null);
       setPendingCallNumber('');
+      return true;
+    }
+    if (showGitHub) {
+      setShowGitHub(false);
       return true;
     }
     if (showSettings) {
@@ -164,6 +170,7 @@ export default function App() {
     showMemory,
     showPermissions,
     showAbout,
+    showGitHub,
     telemetry.flashlightOn,
   ]);
 
@@ -628,6 +635,7 @@ export default function App() {
         isBackgroundActive={isListening}
         onOpenSettings={() => setShowSettings(true)}
         onOpenAbout={() => setShowAbout(true)}
+        onOpenGitHub={() => setShowGitHub(true)}
       />
 
       {/* 2. Main Zero-Touch Voice Assistant Display */}
@@ -795,6 +803,7 @@ export default function App() {
           onToggleOffline={() => {
             setTelemetry((p) => ({ ...p, isOnline: !p.isOnline }));
           }}
+          onOpenGitHub={() => setShowGitHub(true)}
           onClose={() => setShowSettings(false)}
         />
       )}
@@ -837,7 +846,14 @@ export default function App() {
         />
       )}
 
-      {/* 14. Double-Tap Back Exit Toast for Android / Home Screen Protection */}
+      {/* 14. GitHub Integration & APK Push Modal */}
+      {showGitHub && (
+        <GitHubModal
+          onClose={() => setShowGitHub(false)}
+        />
+      )}
+
+      {/* 15. Double-Tap Back Exit Toast for Android / Home Screen Protection */}
       {exitToast && (
         <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 px-5 py-2.5 rounded-2xl bg-zinc-900/95 border border-cyan-500/40 text-cyan-300 text-xs font-semibold shadow-2xl backdrop-blur-lg flex items-center gap-2 animate-fadeIn">
           <ArrowLeft className="w-4 h-4 text-cyan-400" />

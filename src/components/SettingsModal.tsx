@@ -10,6 +10,8 @@ import {
   User,
   Mic,
   Volume1,
+  Github,
+  UploadCloud,
 } from 'lucide-react';
 import { DeviceTelemetry } from '../types';
 import { speechEngine, VoiceSettings } from '../utils/speechEngine';
@@ -19,6 +21,7 @@ interface SettingsModalProps {
   onUpdateVolume: (level: number) => void;
   onToggleFlashlight: () => void;
   onToggleOffline: () => void;
+  onOpenGitHub?: () => void;
   onClose: () => void;
 }
 
@@ -27,6 +30,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onUpdateVolume,
   onToggleFlashlight,
   onToggleOffline,
+  onOpenGitHub,
   onClose,
 }) => {
   const [voiceSettings, setVoiceSettings] = useState<VoiceSettings>(speechEngine.getVoiceSettings());
@@ -186,6 +190,36 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               {telemetry.isOnline ? 'Go Offline' : 'Go Online'}
             </button>
           </div>
+
+          {/* GitHub Push & Android Release Integration (Prompt Requirement #1) */}
+          {onOpenGitHub && (
+            <div className="p-3.5 rounded-2xl bg-gradient-to-r from-cyan-950/40 via-indigo-950/30 to-black border border-cyan-500/30 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-cyan-500/20 text-cyan-300">
+                  <Github className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-white flex items-center gap-1.5">
+                    <span>GitHub APK Integration</span>
+                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">Auto Build</span>
+                  </div>
+                  <div className="text-xs text-zinc-400">
+                    GitHub Repository मा कोड Push र APK रिलिज गर्नुहोस्
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  onClose();
+                  onOpenGitHub();
+                }}
+                className="px-3 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-bold flex items-center gap-1.5 shadow-md shadow-cyan-500/20 transition-all active:scale-95 shrink-0"
+              >
+                <UploadCloud className="w-3.5 h-3.5" />
+                <span>Push Repo</span>
+              </button>
+            </div>
+          )}
         </div>
 
         <button
