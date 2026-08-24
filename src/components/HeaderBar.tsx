@@ -2,6 +2,8 @@ import React from 'react';
 import { BatteryCharging, Battery, Wifi, WifiOff, Radio, ShieldCheck } from 'lucide-react';
 import { DeviceTelemetry } from '../types';
 
+const BHAPUMA_NEON_ICON_URL = 'https://i.postimg.cc/ry98qSYd/file-0000000039f48208a70f87b0d1d2e71c.png';
+
 interface HeaderBarProps {
   telemetry: DeviceTelemetry;
   nepaliTime: string;
@@ -28,8 +30,9 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
         <div className="relative">
           <div className="w-12 h-12 rounded-full p-[2px] bg-gradient-to-tr from-cyan-500 via-indigo-500 to-amber-400 shadow-[0_0_15px_rgba(6,182,212,0.35)] group-hover:shadow-[0_0_22px_rgba(6,182,212,0.6)] transition-all">
             <img
-              src="https://i.postimg.cc/NM3bpncb/d4595745d5fa611b8f8da9861b2cf43d-0.webp"
+              src={BHAPUMA_NEON_ICON_URL}
               alt="Bharat Pun Magar (BHAPUMA)"
+              referrerPolicy="no-referrer"
               className="w-full h-full object-cover rounded-full bg-black/50"
             />
           </div>

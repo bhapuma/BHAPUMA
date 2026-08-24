@@ -18,6 +18,8 @@ class WakeWordDetector {
   private micAnalyser: AnalyserNode | null = null;
   private audioContext: AudioContext | null = null;
   private hasPermissionError = false;
+  private interimTimer: any = null;
+  private currentInterim = '';
 
   constructor() {
     this.initRecognition();
@@ -74,13 +76,28 @@ class WakeWordDetector {
             }
 
             if (finalTranscript) {
+              if (this.interimTimer) clearTimeout(this.interimTimer);
+              this.currentInterim = '';
               this.transcriptCallbacks.forEach((cb) => {
                 try { cb(finalTranscript, true); } catch (e) { console.warn(e); }
               });
             } else if (interimTranscript) {
+              this.currentInterim = interimTranscript;
               this.transcriptCallbacks.forEach((cb) => {
                 try { cb(interimTranscript, false); } catch (e) { console.warn(e); }
               });
+
+              // Fast Real-Time Human-Like Turn Taking (600ms natural pause detection)
+              if (this.interimTimer) clearTimeout(this.interimTimer);
+              this.interimTimer = setTimeout(() => {
+                if (this.currentInterim && this.currentInterim.trim().length > 1) {
+                  const speechSnapshot = this.currentInterim.trim();
+                  this.currentInterim = '';
+                  this.transcriptCallbacks.forEach((cb) => {
+                    try { cb(speechSnapshot, true); } catch (e) { console.warn(e); }
+                  });
+                }
+              }, 600);
             }
           } catch (err) {
             console.warn('onresult parsing error:', err);

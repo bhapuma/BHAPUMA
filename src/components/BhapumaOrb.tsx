@@ -2,6 +2,8 @@ import React, { useEffect, useRef } from 'react';
 import { AssistantState } from '../types';
 import { Mic, Radio, Sparkles, Volume2, WifiOff, AlertCircle } from 'lucide-react';
 
+const BHAPUMA_MAIN_ORB_URL = 'https://i.postimg.cc/ry98qSYd/file-0000000039f48208a70f87b0d1d2e71c.png';
+
 interface BhapumaOrbProps {
   state: AssistantState;
   onClick: () => void;
@@ -195,15 +197,15 @@ export const BhapumaOrb: React.FC<BhapumaOrbProps> = ({
           
           {/* Center Brand Icon / Custom Avatar Micro-Visualizer */}
           <div className="relative z-10 flex flex-col items-center justify-center text-center">
-            <div className="w-14 h-14 rounded-full border border-cyan-400/60 p-0.5 shadow-md shadow-cyan-500/30 overflow-hidden bg-zinc-900 mb-1 group-hover:scale-105 transition-transform duration-300">
+            <div className="w-16 h-16 rounded-full border-2 border-cyan-400 p-0.5 shadow-lg shadow-cyan-500/50 overflow-hidden bg-black mb-1 group-hover:scale-105 transition-transform duration-300 ring-2 ring-blue-500/40">
               <img 
-                src="https://i.postimg.cc/NM3bpncb/d4595745d5fa611b8f8da9861b2cf43d-0.webp" 
+                src={BHAPUMA_MAIN_ORB_URL} 
                 alt="BHAPUMA Avatar"
                 referrerPolicy="no-referrer"
                 className="w-full h-full object-cover rounded-full"
               />
             </div>
-            <span className="text-[10px] font-bold font-mono tracking-widest text-cyan-200">
+            <span className="text-[10px] font-bold font-mono tracking-widest text-cyan-200 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)]">
               BHAPUMA
             </span>
           </div>

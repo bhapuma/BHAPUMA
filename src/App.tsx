@@ -177,7 +177,10 @@ export default function App() {
     }
 
     const onPopState = (e: PopStateEvent) => {
-      e.preventDefault();
+      // Prevent popstate from propagating or exiting if on main screen
+      if (e) {
+        e.preventDefault();
+      }
       const handled = handleBackAction();
       if (handled) {
         try {
@@ -424,33 +427,33 @@ export default function App() {
     [contacts, installedApps, telemetry, userMemory]
   );
 
-  // Main Query Processing (Gemini Live with Offline Fallback)
+  // Main Query Processing (Ultra-Fast Real-Time Live Voice & Smart Dispatch)
   const processUserQuery = useCallback(
     async (text: string) => {
       if (!text.trim()) return;
 
-      // Stop speech if speaking
+      // Immediately stop any prior speech & acknowledge to feel human-like instant
       speechEngine.stopSpeaking();
 
-      // Show transcript
+      // Show transcript immediately
       setLiveTranscript(text);
       if (transcriptTimeoutRef.current) clearTimeout(transcriptTimeoutRef.current);
       transcriptTimeoutRef.current = setTimeout(() => {
         setLiveTranscript('');
-      }, 7000);
+      }, 6000);
 
-      // Check Offline Mode first
-      if (!telemetry.isOnline) {
-        const offlineResult = parseLocalOfflineCommand(text, {
-          batteryLevel: telemetry.batteryLevel,
-          isCharging: telemetry.isCharging,
-          volumeLevel: telemetry.volumeLevel,
-          flashlightOn: telemetry.flashlightOn,
-          contacts,
-          installedApps,
-          memory: userMemory,
-        });
+      // 1. Instant local matching for fast device & offline commands (Instant 0ms latency)
+      const offlineResult = parseLocalOfflineCommand(text, {
+        batteryLevel: telemetry.batteryLevel,
+        isCharging: telemetry.isCharging,
+        volumeLevel: telemetry.volumeLevel,
+        flashlightOn: telemetry.flashlightOn,
+        contacts,
+        installedApps,
+        memory: userMemory,
+      });
 
+      if (offlineResult.handled) {
         if (offlineResult.action === 'flashlight_on') {
           setTelemetry((p) => ({ ...p, flashlightOn: true }));
           setHardwareFlashlight(true);
@@ -477,13 +480,17 @@ export default function App() {
         return;
       }
 
-      // Online Gemini Live Flow
+      // 2. Real-Time Gemini Live Flow
       setAssistantState('THINKING');
 
       try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 6000);
+
         const response = await fetch('/api/assistant/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
           body: JSON.stringify({
             prompt: text,
             conversationHistory: conversationHistoryRef.current,
@@ -496,6 +503,7 @@ export default function App() {
             },
           }),
         });
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
           throw new Error('Gemini API call returned status ' + response.status);
@@ -515,7 +523,7 @@ export default function App() {
         }
 
         if (!replyText) {
-          replyText = 'हजुर, म सुन्दैछु। के मद्दत गर्न सक्छु?';
+          replyText = 'हजुर, म सुन्दैछु। के मद्दत गरूँ?';
         }
 
         // Save conversation history
@@ -524,19 +532,11 @@ export default function App() {
 
         await respondWithVoice(replyText);
       } catch (err: any) {
-        console.warn('Gemini chat error:', err);
+        console.warn('Real-time query fallback to instant natural Nepali response:', err);
         setAssistantState('ERROR');
-        // Offline fallback
-        const offlineResult = parseLocalOfflineCommand(text, {
-          batteryLevel: telemetry.batteryLevel,
-          isCharging: telemetry.isCharging,
-          volumeLevel: telemetry.volumeLevel,
-          flashlightOn: telemetry.flashlightOn,
-          contacts,
-          installedApps,
-          memory: userMemory,
-        });
-        await respondWithVoice(offlineResult.nepaliResponse);
+        // Intelligent quick response
+        const fallbackText = offlineResult.nepaliResponse || 'हजुर, म सुन्दैछु। भन्नुहोस् त?';
+        await respondWithVoice(fallbackText);
       }
     },
     [telemetry, contacts, installedApps, userMemory, executeDeviceTool, respondWithVoice]
@@ -562,11 +562,21 @@ export default function App() {
 
     wakeWordDetector.onError((err) => {
       console.warn('Wake-word engine notice:', err);
+      if (err === 'not-allowed' || err === 'service-not-allowed') {
+        setIsListening(false);
+        setAssistantState('IDLE');
+        setLiveTranscript('माइक्रोफोन अनुमति दिनुहोस्');
+        setTimeout(() => setLiveTranscript(''), 4000);
+      }
     });
   }, [processUserQuery]);
 
-  // Toggle Assistant Mic (Safe, crash-proof handler)
-  const handleToggleMic = async () => {
+  // Toggle Assistant Mic (Safe, crash-proof handler without UI navigation triggers)
+  const handleToggleMic = async (e?: React.MouseEvent | React.TouchEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     try {
       try {
         speechEngine.initAudioContext();
@@ -584,7 +594,9 @@ export default function App() {
         wakeWordDetector.startListening();
         try {
           const analyser = await wakeWordDetector.startMicrophoneCapture();
-          setAnalyserNode(analyser);
+          if (analyser) {
+            setAnalyserNode(analyser);
+          }
         } catch (err) {
           console.warn('Microphone stream non-fatal warning:', err);
         }

@@ -347,26 +347,41 @@ app.post("/api/assistant/chat", async (req, res) => {
       parts: [{ text: contextPrompt }]
     });
     let response;
-    try {
-      response = await ai.models.generateContent({
-        model: "gemini-3.7-flash",
-        contents,
-        config: {
-          systemInstruction: BHAPUMA_SYSTEM_INSTRUCTION,
-          tools,
-          temperature: 0.7
+    const candidateModels = ["gemini-3.7-flash", "gemini-3.1-pro-preview", "gemini-3.1-flash-lite"];
+    let lastError = null;
+    for (const modelName of candidateModels) {
+      try {
+        response = await ai.models.generateContent({
+          model: modelName,
+          contents,
+          config: {
+            systemInstruction: BHAPUMA_SYSTEM_INSTRUCTION,
+            tools,
+            temperature: 0.7
+          }
+        });
+        if (response) break;
+      } catch (err) {
+        lastError = err;
+        console.warn(`Model ${modelName} attempt failed (${err?.status || err?.code || err?.message}). Trying next candidate...`);
+        try {
+          response = await ai.models.generateContent({
+            model: modelName,
+            contents,
+            config: {
+              systemInstruction: BHAPUMA_SYSTEM_INSTRUCTION,
+              temperature: 0.7
+            }
+          });
+          if (response) break;
+        } catch (innerErr) {
+          lastError = innerErr;
+          console.warn(`Model ${modelName} retry without tools also failed:`, innerErr?.message);
         }
-      });
-    } catch (primaryErr) {
-      console.warn("Primary Gemini model retry with safe config...", primaryErr?.message);
-      response = await ai.models.generateContent({
-        model: "gemini-3.7-flash",
-        contents,
-        config: {
-          systemInstruction: BHAPUMA_SYSTEM_INSTRUCTION,
-          temperature: 0.7
-        }
-      });
+      }
+    }
+    if (!response && lastError) {
+      throw lastError;
     }
     const functionCalls = response.functionCalls;
     const responseText = response.text || "";

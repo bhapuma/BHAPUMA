@@ -1,6 +1,8 @@
 import React from 'react';
 import { ExternalLink, UserCheck, Sparkles } from 'lucide-react';
 
+const AVYAN_PROFILE_AVATAR_URL = 'https://i.postimg.cc/NM3bpncb/d4595745d5fa611b8f8da9861b2cf43d-0.webp';
+
 interface AvyanProfileCardProps {
   onOpenProfile: () => void;
 }
@@ -19,8 +21,9 @@ export const AvyanProfileCard: React.FC<AvyanProfileCardProps> = ({ onOpenProfil
         <div className="flex items-center gap-3 relative z-10">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 p-[1.5px] shadow-md flex items-center justify-center">
             <img
-              src="https://i.postimg.cc/NM3bpncb/d4595745d5fa611b8f8da9861b2cf43d-0.webp"
+              src={AVYAN_PROFILE_AVATAR_URL}
               alt="Bharat Pun Magar"
+              referrerPolicy="no-referrer"
               className="w-full h-full object-cover rounded-[10px]"
             />
           </div>

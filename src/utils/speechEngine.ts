@@ -1,12 +1,12 @@
 /**
  * Speech Synthesis & Audio Reaction Engine for BHAPUMA
- * Fully calibrated for a 17-year-old energetic, crisp teenage boy's voice
- * with dynamic pitch/tone controls and realistic vocal pitch curves.
+ * Strictly calibrated for an energetic, crisp, 17-year-old teenage boy (केटाको आवाज)
+ * Prioritizes natural male voices, filters out female voices, and sets authentic youth pitch.
  */
 
 export interface VoiceSettings {
-  pitch: number; // 0.5 - 2.0 (1.28 for vibrant teenage boy)
-  rate: number;  // 0.5 - 2.0 (1.06 for lively teenager cadence)
+  pitch: number; // 0.8 - 1.4 (Default 0.96 for natural energetic teenage boy)
+  rate: number;  // 0.8 - 1.4 (Default 1.05 for natural teenage cadence)
   volume: number; // 0.0 - 1.0
   voiceStyle: 'teen_boy' | 'young_energetic' | 'deep_teen';
 }
@@ -21,8 +21,8 @@ class SpeechEngine {
   private voices: SpeechSynthesisVoice[] = [];
 
   private settings: VoiceSettings = {
-    pitch: 1.28, // 17yo lively teenage boy pitch
-    rate: 1.08,  // Energetic modern youth rate
+    pitch: 0.96, // Realistic natural 17yo male teenager tone (crisp, not robotic or high-pitched girl)
+    rate: 1.05,  // Natural young boy speed
     volume: 1.0,
     voiceStyle: 'teen_boy',
   };
@@ -118,7 +118,6 @@ class SpeechEngine {
 
       if (!this.synth) {
         resolve();
-        return;
       }
 
       const cleanText = text.replace(/[*#_`]/g, '').trim();
@@ -134,35 +133,57 @@ class SpeechEngine {
         this.loadVoices();
       }
 
-      // Voice selection prioritized for a young male / Nepali/Hindi energetic vocal
-      const nepaliVoices = this.voices.filter((v) => v.lang.startsWith('ne') || v.name.toLowerCase().includes('nepali'));
-      const hindiMaleVoices = this.voices.filter(
-        (v) => (v.lang.startsWith('hi') || v.lang.startsWith('mr')) &&
-               (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('google') || v.name.toLowerCase().includes('david') || !v.name.toLowerCase().includes('female'))
-      );
-      const youthMaleVoices = this.voices.filter(
-        (v) => (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('guy') || v.name.toLowerCase().includes('boy') || v.name.toLowerCase().includes('natural')) &&
-               !v.name.toLowerCase().includes('female')
-      );
+      // Filter specifically for MALE / TEENAGER voices and filter OUT female voice keywords
+      const femaleKeywords = ['female', 'woman', 'girl', 'zira', 'kavya', 'priya', 'kalpana', 'sangeeta', 'veena', 'ananya', 'lekhika', 'siri female', 'heera'];
+      const isFemale = (v: SpeechSynthesisVoice) => {
+        const lowerName = (v.name + ' ' + (v.voiceURI || '')).toLowerCase();
+        return femaleKeywords.some(kw => lowerName.includes(kw));
+      };
 
-      if (nepaliVoices.length > 0) {
-        utterance.voice = nepaliVoices[0];
+      const maleKeywords = ['male', 'man', 'boy', 'guy', 'david', 'george', 'ravi', 'madhav', 'neil', 'ajay', 'rahul', 'amit', 'google हिन्दी', 'google nepali', 'natural'];
+      const isMale = (v: SpeechSynthesisVoice) => {
+        const lowerName = (v.name + ' ' + (v.voiceURI || '')).toLowerCase();
+        return maleKeywords.some(kw => lowerName.includes(kw)) && !isFemale(v);
+      };
+
+      // 1. Explicit Nepali Male voices if present
+      const nepaliMaleVoices = this.voices.filter(v => (v.lang.startsWith('ne') || v.name.toLowerCase().includes('nepali')) && !isFemale(v));
+      
+      // 2. Hindi/Regional Male voices (very natural in Nepali accent on Android/Chrome)
+      const hindiMaleVoices = this.voices.filter(v => (v.lang.startsWith('hi') || v.lang.startsWith('mr') || v.lang.startsWith('bn')) && isMale(v));
+      const hindiAnyNonFemale = this.voices.filter(v => (v.lang.startsWith('hi') || v.lang.startsWith('mr')) && !isFemale(v));
+
+      // 3. System-wide Young Male voices
+      const generalMaleVoices = this.voices.filter(v => isMale(v));
+
+      let chosenVoice: SpeechSynthesisVoice | null = null;
+
+      if (nepaliMaleVoices.length > 0) {
+        chosenVoice = nepaliMaleVoices[0];
         utterance.lang = 'ne-NP';
       } else if (hindiMaleVoices.length > 0) {
-        utterance.voice = hindiMaleVoices[0];
+        chosenVoice = hindiMaleVoices[0];
         utterance.lang = 'hi-IN';
-      } else if (youthMaleVoices.length > 0) {
-        utterance.voice = youthMaleVoices[0];
+      } else if (hindiAnyNonFemale.length > 0) {
+        chosenVoice = hindiAnyNonFemale[0];
+        utterance.lang = 'hi-IN';
+      } else if (generalMaleVoices.length > 0) {
+        chosenVoice = generalMaleVoices[0];
+        utterance.lang = chosenVoice.lang || 'ne-NP';
       }
 
-      // Explicit acoustic profile for a lively, energetic 17-year-old boy
-      utterance.pitch = this.settings.pitch; // 1.28 for vibrant youthful male timbre
-      utterance.rate = this.settings.rate;   // 1.08 for dynamic teenage rhythm
+      if (chosenVoice) {
+        utterance.voice = chosenVoice;
+      }
+
+      // Exact acoustic profile for a lively, authentic 17-year-old teenage boy
+      utterance.pitch = this.settings.pitch; // 0.96 for natural crisp boy timbre (not squeaky/female)
+      utterance.rate = this.settings.rate;   // 1.05 for energetic youthful pace
       utterance.volume = this.settings.volume;
 
       utterance.onstart = () => {
         this.isSpeaking = true;
-        this.playTone(520, 0.04); // Youthful crisp wake chime
+        this.playTone(480, 0.04); // Youthful crisp wake chime
         if (this.onSpeakingStateChange) {
           this.onSpeakingStateChange(true);
         }
@@ -177,7 +198,7 @@ class SpeechEngine {
       };
 
       utterance.onerror = (e) => {
-        console.warn('Speech synthesis error:', e);
+        console.warn('Speech synthesis notice:', e);
         this.isSpeaking = false;
         if (this.onSpeakingStateChange) {
           this.onSpeakingStateChange(false);
@@ -185,7 +206,9 @@ class SpeechEngine {
         resolve();
       };
 
-      this.synth.speak(utterance);
+      if (this.synth) {
+        this.synth.speak(utterance);
+      }
     });
   }
 

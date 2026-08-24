@@ -345,27 +345,46 @@ app.post("/api/assistant/chat", async (req, res) => {
       parts: [{ text: contextPrompt }],
     });
 
-    let response;
-    try {
-      response = await ai.models.generateContent({
-        model: "gemini-3.7-flash",
-        contents: contents,
-        config: {
-          systemInstruction: BHAPUMA_SYSTEM_INSTRUCTION,
-          tools: tools,
-          temperature: 0.7,
-        },
-      });
-    } catch (primaryErr: any) {
-      console.warn("Primary Gemini model retry with safe config...", primaryErr?.message);
-      response = await ai.models.generateContent({
-        model: "gemini-3.7-flash",
-        contents: contents,
-        config: {
-          systemInstruction: BHAPUMA_SYSTEM_INSTRUCTION,
-          temperature: 0.7,
-        },
-      });
+    // Try Primary Model (gemini-3.7-flash), then fallback to gemini-3.1-pro-preview or gemini-3.1-flash-lite if 503/high-demand occurs
+    let response: any;
+    const candidateModels = ["gemini-3.7-flash", "gemini-3.1-pro-preview", "gemini-3.1-flash-lite"];
+
+    let lastError: any = null;
+    for (const modelName of candidateModels) {
+      try {
+        response = await ai.models.generateContent({
+          model: modelName,
+          contents: contents,
+          config: {
+            systemInstruction: BHAPUMA_SYSTEM_INSTRUCTION,
+            tools: tools,
+            temperature: 0.7,
+          },
+        });
+        if (response) break;
+      } catch (err: any) {
+        lastError = err;
+        console.warn(`Model ${modelName} attempt failed (${err?.status || err?.code || err?.message}). Trying next candidate...`);
+        // If it was a tools format error, attempt without tools
+        try {
+          response = await ai.models.generateContent({
+            model: modelName,
+            contents: contents,
+            config: {
+              systemInstruction: BHAPUMA_SYSTEM_INSTRUCTION,
+              temperature: 0.7,
+            },
+          });
+          if (response) break;
+        } catch (innerErr: any) {
+          lastError = innerErr;
+          console.warn(`Model ${modelName} retry without tools also failed:`, innerErr?.message);
+        }
+      }
+    }
+
+    if (!response && lastError) {
+      throw lastError;
     }
 
     const functionCalls = response.functionCalls;
