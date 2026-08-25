@@ -4,17 +4,17 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
+      - master
   workflow_dispatch:
 
 permissions:
   contents: write
+  packages: write
+  actions: read
 
 jobs:
   build:
-    name: Build Android APK
+    name: Build & Release Android APK
     runs-on: ubuntu-latest
 
     steps:
@@ -25,17 +25,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
 
-      - name: ☕ Setup Java 17
+      - name: ☕ Setup Java 17 (Temurin)
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: 17
+          java-version: '17'
 
-      - name: 📦 Install Dependencies
+      - name: 📦 Install Node Dependencies
         run: |
-          npm ci || npm install --legacy-peer-deps
+          npm install --legacy-peer-deps --no-audit --no-fund
 
       - name: ⚡ Build Web Assets
         run: |
@@ -43,7 +42,7 @@ jobs:
 
       - name: 📱 Sync Capacitor Android Project
         run: |
-          npx cap sync android
+          npx @capacitor/cli sync android || npx cap sync android
 
       - name: 🔑 Ensure Android Debug Keystore
         run: |
@@ -58,10 +57,10 @@ jobs:
           chmod +x ./gradlew
           ./gradlew clean --no-daemon
 
-      - name: 🚀 Build Debug APK
+      - name: 🚀 Build Android Debug APK
         working-directory: android
         run: |
-          ./gradlew :app:assembleDebug --stacktrace --no-daemon
+          ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: 🔍 Locate Generated APK
         id: locate_apk
@@ -77,7 +76,7 @@ jobs:
             exit 1
           fi
           
-          APK_NAME="BHAPUMA-AI-Assistant-debug-build-${{ github.run_number }}.apk"
+          APK_NAME="BHAPUMA-AI-Assistant-v1.0.${{ github.run_number }}.apk"
           cp "$APK_PATH" "build-output/$APK_NAME"
           
           echo "apk_path=build-output/$APK_NAME" >> "$GITHUB_OUTPUT"
@@ -87,29 +86,31 @@ jobs:
       - name: 📤 Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug-apk
+          name: BHAPUMA-Android-APK-v1.0.${{ github.run_number }}
           path: ${{ steps.locate_apk.outputs.apk_path }}
           if-no-files-found: error
           retention-days: 30
 
       - name: 🏷️ Publish GitHub Release Asset
-        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         continue-on-error: true
         with:
           tag_name: "v1.0.${{ github.run_number }}"
-          name: "BHAPUMA Android APK Build #${{ github.run_number }}"
+          name: "BHAPUMA Android APK Release (v1.0.${{ github.run_number }})"
           body: |
-            ## 🤖 BHAPUMA AI Voice Assistant - Android APK Release
+            ## 🤖 BHAPUMA AI Assistant - Android APK Release
 
-            - **Build Number:** #${{ github.run_number }}
-            - **Commit:** `${{ github.sha }}`
-            - **Package:** `com.bhapuma.ai.assistant`
+            - **Build Version:** `v1.0.${{ github.run_number }}`
+            - **Commit SHA:** `${{ github.sha }}`
+            - **Branch:** `${{ github.ref_name }}`
 
-            ### 📲 Installation:
-            Download **`${{ steps.locate_apk.outputs.apk_name }}`** from the Assets list below and open it on your Android smartphone.
+            ### 📲 कसरी इन्स्टल गर्ने (Installation Steps):
+            1. तल **Assets** सेक्सनबाट **`${{ steps.locate_apk.outputs.apk_name }}`** डाउनलोड गर्नुहोस्।
+            2. आफ्नो मोबाइलमा फाइल खोल्नुहोस् र **Install** थिच्नुहोस्।
           files: ${{ steps.locate_apk.outputs.apk_path }}
           draft: false
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
