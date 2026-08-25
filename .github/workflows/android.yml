@@ -54,21 +54,13 @@ jobs:
       - name: 🐘 Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: 8.2.1
-
-      - name: 🛠️ Ensure Gradle Wrapper
-        working-directory: android
-        run: |
-          if [ ! -s gradle/wrapper/gradle-wrapper.jar ]; then
-            echo "Gradle wrapper jar missing or empty. Regenerating..."
-            gradle wrapper --gradle-version 8.2.1 --distribution-type all
-          fi
-          chmod +x ./gradlew
+          gradle-version: '8.2.1'
+          validate-wrappers: false
 
       - name: 🚀 Build Android Debug APK
         working-directory: android
         run: |
-          ./gradlew assembleDebug --no-daemon --stacktrace || gradle assembleDebug --no-daemon --stacktrace
+          gradle assembleDebug --no-daemon --stacktrace
 
       - name: 🔍 Locate Generated APK
         id: locate_apk
