@@ -1,0 +1,115 @@
+name: Android CI / Build APK
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: ☕ Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: 17
+
+      - name: 📦 Install Dependencies
+        run: |
+          npm ci || npm install --legacy-peer-deps
+
+      - name: ⚡ Build Web Assets
+        run: |
+          npm run build
+
+      - name: 📱 Sync Capacitor Android Project
+        run: |
+          npx cap sync android
+
+      - name: 🔑 Ensure Android Debug Keystore
+        run: |
+          mkdir -p ~/.android
+          if [ ! -f ~/.android/debug.keystore ]; then
+            keytool -genkey -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          fi
+
+      - name: 🛠️ Make Gradlew Executable & Clean
+        working-directory: android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew clean --no-daemon
+
+      - name: 🚀 Build Debug APK
+        working-directory: android
+        run: |
+          ./gradlew :app:assembleDebug --stacktrace --no-daemon
+
+      - name: 🔍 Locate Generated APK
+        id: locate_apk
+        shell: bash
+        run: |
+          mkdir -p build-output
+          APK_PATH=$(find android/app/build/outputs/apk/debug -name "*.apk" -type f | head -n 1)
+          if [ -z "$APK_PATH" ]; then
+            APK_PATH=$(find android -name "*debug*.apk" -o -name "*.apk" | head -n 1)
+          fi
+          if [ -z "$APK_PATH" ] || [ ! -f "$APK_PATH" ]; then
+            echo "::error::Could not find compiled Android APK"
+            exit 1
+          fi
+          
+          APK_NAME="BHAPUMA-AI-Assistant-debug-build-${{ github.run_number }}.apk"
+          cp "$APK_PATH" "build-output/$APK_NAME"
+          
+          echo "apk_path=build-output/$APK_NAME" >> "$GITHUB_OUTPUT"
+          echo "apk_name=$APK_NAME" >> "$GITHUB_OUTPUT"
+          echo "APK successfully staged at build-output/$APK_NAME"
+
+      - name: 📤 Upload Debug APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          path: ${{ steps.locate_apk.outputs.apk_path }}
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: 🏷️ Publish GitHub Release Asset
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        uses: softprops/action-gh-release@v2
+        continue-on-error: true
+        with:
+          tag_name: "v1.0.${{ github.run_number }}"
+          name: "BHAPUMA Android APK Build #${{ github.run_number }}"
+          body: |
+            ## 🤖 BHAPUMA AI Voice Assistant - Android APK Release
+
+            - **Build Number:** #${{ github.run_number }}
+            - **Commit:** `${{ github.sha }}`
+            - **Package:** `com.bhapuma.ai.assistant`
+
+            ### 📲 Installation:
+            Download **`${{ steps.locate_apk.outputs.apk_name }}`** from the Assets list below and open it on your Android smartphone.
+          files: ${{ steps.locate_apk.outputs.apk_path }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

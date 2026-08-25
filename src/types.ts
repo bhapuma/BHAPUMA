@@ -78,3 +78,41 @@ export interface GitHubStatusInfo {
   connectedRepoName: string | null;
 }
 
+export interface GitHubWorkflowRun {
+  id: number;
+  name: string;
+  displayTitle: string;
+  headSha: string;
+  headBranch: string;
+  status: "queued" | "in_progress" | "completed" | "waiting" | string;
+  conclusion: "success" | "failure" | "cancelled" | "skipped" | "timed_out" | null;
+  htmlUrl: string;
+  createdAt: string;
+  updatedAt: string;
+  runNumber: number;
+  event: string;
+  author: {
+    login: string;
+    avatarUrl?: string;
+  };
+  artifactsUrl: string;
+}
+
+export interface GitHubBuildStatusResponse {
+  connected: boolean;
+  repo: string | null;
+  branch: string | null;
+  latestRun: GitHubWorkflowRun | null;
+  recentRuns: GitHubWorkflowRun[];
+  releases: Array<{
+    id: number;
+    tagName: string;
+    name: string;
+    htmlUrl: string;
+    publishedAt: string;
+    apkDownloadUrl?: string;
+    apkName?: string;
+    apkSize?: number;
+  }>;
+}
+

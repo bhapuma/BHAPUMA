@@ -311,3 +311,120 @@ export async function disconnectGitHub(): Promise<{ success: boolean; message: s
     message: "GitHub repository disconnected successfully.",
   };
 }
+
+/**
+ * Fetch the latest commit & workflow build run status directly from GitHub Actions API
+ * using a secure read-only token if available.
+ */
+export async function getGitHubBuildStatus(repoOwnerAndName?: string, customToken?: string) {
+  const status = await getGitStatus();
+  const repoName = repoOwnerAndName?.trim() || status.connectedRepoName;
+
+  if (!repoName || !repoName.includes("/")) {
+    return {
+      connected: false,
+      repo: null,
+      branch: status.currentBranch || "main",
+      latestRun: null,
+      recentRuns: [],
+      releases: [],
+    };
+  }
+
+  // Token prioritization:
+  // 1. Provided customToken (from UI session or request)
+  // 2. process.env.GITHUB_READ_TOKEN or process.env.GITHUB_TOKEN
+  const token = customToken?.trim() || process.env.GITHUB_READ_TOKEN || process.env.GITHUB_TOKEN || "";
+
+  const headers: Record<string, string> = {
+    "Accept": "application/vnd.github+json",
+    "User-Agent": "BHAPUMA-Android-Applet",
+  };
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const [owner, repo] = repoName.split("/");
+
+  let recentRuns: any[] = [];
+  let latestRun: any = null;
+  let releases: any[] = [];
+
+  // 1. Fetch Workflow Runs from GitHub Actions API
+  try {
+    const runsUrl = `https://api.github.com/repos/${owner}/${repo}/actions/runs?per_page=5`;
+    const runsRes = await fetch(runsUrl, { headers });
+
+    if (runsRes.ok) {
+      const data: any = await runsRes.json();
+      if (data.workflow_runs && Array.isArray(data.workflow_runs)) {
+        recentRuns = data.workflow_runs.map((r: any) => ({
+          id: r.id,
+          name: r.name,
+          displayTitle: r.display_title || r.head_commit?.message || "Workflow Run",
+          headSha: r.head_sha ? r.head_sha.substring(0, 7) : "",
+          headBranch: r.head_branch || "main",
+          status: r.status, // queued, in_progress, completed
+          conclusion: r.conclusion, // success, failure, cancelled, etc.
+          htmlUrl: r.html_url,
+          createdAt: r.created_at,
+          updatedAt: r.updated_at,
+          runNumber: r.run_number,
+          event: r.event,
+          author: {
+            login: r.triggering_actor?.login || r.head_commit?.author?.name || "Author",
+            avatarUrl: r.triggering_actor?.avatar_url,
+          },
+          artifactsUrl: r.artifacts_url,
+        }));
+
+        if (recentRuns.length > 0) {
+          latestRun = recentRuns[0];
+        }
+      }
+    } else {
+      const errText = await runsRes.text();
+      console.warn(`GitHub Actions API returned ${runsRes.status}:`, errText);
+    }
+  } catch (err: any) {
+    console.warn("Failed to fetch GitHub Actions runs:", err.message);
+  }
+
+  // 2. Fetch Latest Releases & APKs
+  try {
+    const relUrl = `https://api.github.com/repos/${owner}/${repo}/releases?per_page=3`;
+    const relRes = await fetch(relUrl, { headers });
+
+    if (relRes.ok) {
+      const relData: any = await relRes.json();
+      if (Array.isArray(relData)) {
+        releases = relData.map((rel: any) => {
+          // Find apk asset if exists
+          const apkAsset = rel.assets?.find((a: any) => a.name.endsWith(".apk") || a.content_type?.includes("android.package-archive"));
+          return {
+            id: rel.id,
+            tagName: rel.tag_name,
+            name: rel.name || rel.tag_name,
+            htmlUrl: rel.html_url,
+            publishedAt: rel.published_at || rel.created_at,
+            apkDownloadUrl: apkAsset ? apkAsset.browser_download_url : undefined,
+            apkName: apkAsset ? apkAsset.name : undefined,
+            apkSize: apkAsset ? apkAsset.size : undefined,
+          };
+        });
+      }
+    }
+  } catch (err: any) {
+    console.warn("Failed to fetch GitHub releases:", err.message);
+  }
+
+  return {
+    connected: true,
+    repo: repoName,
+    branch: status.currentBranch || "main",
+    latestRun,
+    recentRuns,
+    releases,
+  };
+}

@@ -3,7 +3,7 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from "dotenv";
-import { getGitStatus, pushProjectToGitHub, disconnectGitHub } from "./src/utils/githubService";
+import { getGitStatus, pushProjectToGitHub, disconnectGitHub, getGitHubBuildStatus } from "./src/utils/githubService";
 
 dotenv.config();
 
@@ -511,6 +511,25 @@ app.post("/api/github/disconnect", async (req, res) => {
     res.status(500).json({
       success: false,
       error: error.message || "Failed to disconnect GitHub repository",
+    });
+  }
+});
+
+// 4. Get GitHub Actions latest build run status using read-only token
+app.get("/api/github/build-status", async (req, res) => {
+  try {
+    const repo = req.query.repo as string | undefined;
+    const token = (req.query.token as string | undefined) || (req.headers["x-github-token"] as string | undefined);
+    const data = await getGitHubBuildStatus(repo, token);
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (error: any) {
+    console.error("GitHub Build Status API Error:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message || "Failed to retrieve GitHub Actions build status",
     });
   }
 });
