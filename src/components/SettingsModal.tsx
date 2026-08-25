@@ -8,10 +8,7 @@ import {
   Flashlight,
   Sliders,
   User,
-  Mic,
   Volume1,
-  Github,
-  UploadCloud,
 } from 'lucide-react';
 import { DeviceTelemetry } from '../types';
 import { speechEngine, VoiceSettings } from '../utils/speechEngine';
@@ -21,7 +18,6 @@ interface SettingsModalProps {
   onUpdateVolume: (level: number) => void;
   onToggleFlashlight: () => void;
   onToggleOffline: () => void;
-  onOpenGitHub?: () => void;
   onClose: () => void;
 }
 
@@ -30,7 +26,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onUpdateVolume,
   onToggleFlashlight,
   onToggleOffline,
-  onOpenGitHub,
   onClose,
 }) => {
   const [voiceSettings, setVoiceSettings] = useState<VoiceSettings>(speechEngine.getVoiceSettings());
@@ -47,8 +42,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     speechEngine.updateVoiceSettings({ rate });
   };
 
+  const selectMaleVoicePreset = (pitch: number, rate: number, style: 'teen_boy' | 'energetic_male' | 'deep_male') => {
+    const updated = { ...voiceSettings, pitch, rate, voiceStyle: style };
+    setVoiceSettings(updated);
+    speechEngine.updateVoiceSettings(updated);
+    speechEngine.speak('नमस्ते दाजु! म भपुम, तपाईंको स्मार्ट असिस्टेन्ट तयार छु!');
+  };
+
   const testTeenagerVoice = () => {
-    speechEngine.speak('नमस्ते भरत दाजु! म भपुम, तपाईंको स्मार्ट एआई भ्वाइस असिस्टेन्ट तयार छु!');
+    speechEngine.speak('नमस्ते भरत दाजु! म भपुम, तपाईंको स्मार्ट एआई असिस्टेन्ट। म सुन्दैछु, आज्ञा गर्नुहोस्!');
   };
 
   return (
@@ -70,28 +72,65 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2 text-sm font-bold text-cyan-300">
                 <User className="w-4 h-4 text-cyan-400" />
-                <span>१७ वर्षे किशोर आवाज (Teenager Boy Voice)</span>
+                <span>१७ वर्षे केटाको आवाज (100% Male Voice)</span>
               </div>
               <button
                 onClick={testTeenagerVoice}
-                className="px-2.5 py-1 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-bold flex items-center gap-1 shadow-md shadow-cyan-500/20 transition-all active:scale-95"
+                className="px-2.5 py-1 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-bold flex items-center gap-1 shadow-md shadow-cyan-500/20 transition-all active:scale-95 cursor-pointer"
               >
                 <Volume1 className="w-3.5 h-3.5" />
-                <span>आवाज सुन्नुहोस्</span>
+                <span>आवाज टेस्ट</span>
               </button>
             </div>
 
-            {/* Pitch Controller */}
+            {/* Male Voice Quick Presets */}
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              <button
+                type="button"
+                onClick={() => selectMaleVoicePreset(0.90, 1.02, 'teen_boy')}
+                className={`px-2 py-1.5 rounded-xl text-[11px] font-bold border transition-all cursor-pointer ${
+                  voiceSettings.voiceStyle === 'teen_boy'
+                    ? 'bg-cyan-500/30 border-cyan-400 text-cyan-300 shadow-sm shadow-cyan-500/20'
+                    : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white'
+                }`}
+              >
+                १७ वर्षे केटो
+              </button>
+              <button
+                type="button"
+                onClick={() => selectMaleVoicePreset(0.96, 1.08, 'energetic_male')}
+                className={`px-2 py-1.5 rounded-xl text-[11px] font-bold border transition-all cursor-pointer ${
+                  voiceSettings.voiceStyle === 'energetic_male'
+                    ? 'bg-cyan-500/30 border-cyan-400 text-cyan-300 shadow-sm shadow-cyan-500/20'
+                    : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white'
+                }`}
+              >
+                ऊर्जावान केटो
+              </button>
+              <button
+                type="button"
+                onClick={() => selectMaleVoicePreset(0.82, 0.98, 'deep_male')}
+                className={`px-2 py-1.5 rounded-xl text-[11px] font-bold border transition-all cursor-pointer ${
+                  voiceSettings.voiceStyle === 'deep_male'
+                    ? 'bg-cyan-500/30 border-cyan-400 text-cyan-300 shadow-sm shadow-cyan-500/20'
+                    : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white'
+                }`}
+              >
+                गम्भीर आवाज
+              </button>
+            </div>
+
+            {/* Pitch Controller (Strictly calibrated for male voice spectrum) */}
             <div className="mb-3">
               <div className="flex items-center justify-between text-xs text-zinc-300 mb-1.5">
-                <span>आवाजको तिखोपन (Youth Pitch)</span>
+                <span>आवाजको बेस / पिच (Male Pitch)</span>
                 <span className="font-mono text-cyan-400 font-bold">{voiceSettings.pitch.toFixed(2)}x</span>
               </div>
               <input
                 type="range"
-                min="0.8"
-                max="1.6"
-                step="0.05"
+                min="0.75"
+                max="1.05"
+                step="0.02"
                 value={voiceSettings.pitch}
                 onChange={(e) => handlePitchChange(parseFloat(e.target.value))}
                 className="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-cyan-400"
@@ -106,9 +145,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
               <input
                 type="range"
-                min="0.8"
-                max="1.4"
-                step="0.05"
+                min="0.85"
+                max="1.25"
+                step="0.03"
                 value={voiceSettings.rate}
                 onChange={(e) => handleRateChange(parseFloat(e.target.value))}
                 className="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-cyan-400"
@@ -190,36 +229,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               {telemetry.isOnline ? 'Go Offline' : 'Go Online'}
             </button>
           </div>
-
-          {/* GitHub Push & Android Release Integration (Prompt Requirement #1) */}
-          {onOpenGitHub && (
-            <div className="p-3.5 rounded-2xl bg-gradient-to-r from-cyan-950/40 via-indigo-950/30 to-black border border-cyan-500/30 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-cyan-500/20 text-cyan-300">
-                  <Github className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="text-sm font-bold text-white flex items-center gap-1.5">
-                    <span>GitHub APK Integration</span>
-                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">Auto Build</span>
-                  </div>
-                  <div className="text-xs text-zinc-400">
-                    GitHub Repository मा कोड Push र APK रिलिज गर्नुहोस्
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={() => {
-                  onClose();
-                  onOpenGitHub();
-                }}
-                className="px-3 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-bold flex items-center gap-1.5 shadow-md shadow-cyan-500/20 transition-all active:scale-95 shrink-0"
-              >
-                <UploadCloud className="w-3.5 h-3.5" />
-                <span>Push Repo</span>
-              </button>
-            </div>
-          )}
         </div>
 
         <button

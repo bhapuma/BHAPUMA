@@ -1,8 +1,9 @@
 import React from 'react';
-import { BatteryCharging, Battery, Wifi, WifiOff, Radio, ShieldCheck, Github } from 'lucide-react';
+import { BatteryCharging, Battery, Wifi, WifiOff, Radio, ShieldCheck } from 'lucide-react';
 import { DeviceTelemetry } from '../types';
 
-const BHAPUMA_NEON_ICON_URL = 'https://i.postimg.cc/ry98qSYd/file-0000000039f48208a70f87b0d1d2e71c.png';
+// URL 2 for Bharat Pun Magar avatar (Top-Left branding & profile)
+const BHARAT_TOP_AVATAR_URL = 'https://i.postimg.cc/NM3bpncb/d4595745d5fa611b8f8da9861b2cf43d-0.webp';
 
 interface HeaderBarProps {
   telemetry: DeviceTelemetry;
@@ -10,7 +11,6 @@ interface HeaderBarProps {
   isBackgroundActive: boolean;
   onOpenSettings: () => void;
   onOpenAbout: () => void;
-  onOpenGitHub?: () => void;
 }
 
 export const HeaderBar: React.FC<HeaderBarProps> = ({
@@ -19,20 +19,19 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   isBackgroundActive,
   onOpenSettings,
   onOpenAbout,
-  onOpenGitHub,
 }) => {
   return (
     <header className="w-full px-4 pt-3 pb-2 flex items-center justify-between border-b border-white/5 bg-[#030306]/80 backdrop-blur-md sticky top-0 z-30 select-none">
       {/* Left: Official BHAPUMA Branding */}
       <div 
         onClick={onOpenAbout}
-        className="flex items-center gap-3.5 cursor-pointer group transition-all"
+        className="flex items-center gap-3 cursor-pointer group transition-all"
         title="BHAPUMA Assistant Profile"
       >
         <div className="relative">
-          <div className="w-12 h-12 rounded-full p-[2px] bg-gradient-to-tr from-cyan-500 via-indigo-500 to-amber-400 shadow-[0_0_15px_rgba(6,182,212,0.35)] group-hover:shadow-[0_0_22px_rgba(6,182,212,0.6)] transition-all">
+          <div className="w-11 h-11 rounded-full p-[2px] bg-gradient-to-tr from-cyan-500 via-indigo-500 to-amber-400 shadow-[0_0_15px_rgba(6,182,212,0.35)] group-hover:shadow-[0_0_22px_rgba(6,182,212,0.6)] transition-all">
             <img
-              src={BHAPUMA_NEON_ICON_URL}
+              src={BHARAT_TOP_AVATAR_URL}
               alt="Bharat Pun Magar (BHAPUMA)"
               referrerPolicy="no-referrer"
               className="w-full h-full object-cover rounded-full bg-black/50"
@@ -60,18 +59,6 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
 
       {/* Right: Android Status Bar & Controls */}
       <div className="flex items-center gap-2 sm:gap-2.5 text-xs text-zinc-300">
-        {/* GitHub Integration Button (Prompt Requirement #1) */}
-        {onOpenGitHub && (
-          <button
-            onClick={onOpenGitHub}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-cyan-950/60 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-900/60 hover:border-cyan-400 transition-all cursor-pointer shadow-[0_0_10px_rgba(6,182,212,0.15)] active:scale-95"
-            title="GitHub Integration & Push to GitHub"
-          >
-            <Github className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="text-[11px] font-bold hidden xs:inline">GitHub</span>
-          </button>
-        )}
-
         {/* Background Service Status */}
         <div 
           onClick={onOpenSettings}

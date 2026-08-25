@@ -1,14 +1,15 @@
 /**
  * Speech Synthesis & Audio Reaction Engine for BHAPUMA
- * Strictly calibrated for an energetic, crisp, 17-year-old teenage boy (केटाको आवाज)
- * Prioritizes natural male voices, filters out female voices, and sets authentic youth pitch.
+ * Strictly calibrated for a 17-year-old teenage boy (केटाको प्राकृतिक र स्पष्ट आवाज)
+ * Strictly prioritizes natural male voices, filters out female voices completely,
+ * and sets an authentic young male acoustic profile.
  */
 
 export interface VoiceSettings {
-  pitch: number; // 0.8 - 1.4 (Default 0.96 for natural energetic teenage boy)
-  rate: number;  // 0.8 - 1.4 (Default 1.05 for natural teenage cadence)
+  pitch: number; // 0.7 - 1.2 (Default 0.90 for authentic natural teenage male timbre)
+  rate: number;  // 0.8 - 1.3 (Default 1.02 for clear, lively boy cadence)
   volume: number; // 0.0 - 1.0
-  voiceStyle: 'teen_boy' | 'young_energetic' | 'deep_teen';
+  voiceStyle: 'teen_boy' | 'energetic_male' | 'deep_male';
 }
 
 class SpeechEngine {
@@ -21,8 +22,8 @@ class SpeechEngine {
   private voices: SpeechSynthesisVoice[] = [];
 
   private settings: VoiceSettings = {
-    pitch: 0.96, // Realistic natural 17yo male teenager tone (crisp, not robotic or high-pitched girl)
-    rate: 1.05,  // Natural young boy speed
+    pitch: 0.90, // Calibrated strictly for an authentic, resonant, youthful male voice (केटाको आवाज)
+    rate: 1.02,  // Natural lively cadence
     volume: 1.0,
     voiceStyle: 'teen_boy',
   };
@@ -108,7 +109,7 @@ class SpeechEngine {
       osc.start();
       osc.stop(this.audioCtx.currentTime + duration);
     } catch (e) {
-      // Non-blocking catch for autoplay audio restrictions
+      // Non-blocking catch for autoplay restrictions
     }
   }
 
@@ -118,6 +119,7 @@ class SpeechEngine {
 
       if (!this.synth) {
         resolve();
+        return;
       }
 
       const cleanText = text.replace(/[*#_`]/g, '').trim();
@@ -133,57 +135,106 @@ class SpeechEngine {
         this.loadVoices();
       }
 
-      // Filter specifically for MALE / TEENAGER voices and filter OUT female voice keywords
-      const femaleKeywords = ['female', 'woman', 'girl', 'zira', 'kavya', 'priya', 'kalpana', 'sangeeta', 'veena', 'ananya', 'lekhika', 'siri female', 'heera'];
+      // 1. Comprehensive Female Voice Blacklist (Must NEVER pick a female voice)
+      const femaleKeywords = [
+        'female', 'woman', 'girl', 'zira', 'kavya', 'priya', 'kalpana', 'sangeeta', 'veena',
+        'ananya', 'lekhika', 'siri female', 'heera', 'swara', 'neha', 'pooja', 'aditi',
+        'kavitha', 'shreya', 'vani', 'samantha', 'victoria', 'karen', 'moira', 'tessa',
+        'fiona', 'monica', 'paulina', 'luciana', 'carmit', 'yuna', 'kyoko', 'sin-ji',
+        'ting-ting', 'mei-jia', 'ya-ling', 'damayanti', 'alva', 'ellen', 'sara', 'amelie',
+        'audrey', 'aurelie', 'celine', 'marie', 'clara', 'eva', 'petra', 'federica',
+        'alice', 'milena', 'anna', 'marta', 'helena', 'ioana', 'laura', 'alisa', 'olga',
+        'yolanda', 'marina', 'kanya', 'yelda', 'hi-in-x-hic-local', 'hi-in-x-hid-local'
+      ];
+
       const isFemale = (v: SpeechSynthesisVoice) => {
-        const lowerName = (v.name + ' ' + (v.voiceURI || '')).toLowerCase();
-        return femaleKeywords.some(kw => lowerName.includes(kw));
+        const lower = `${v.name} ${v.voiceURI || ''}`.toLowerCase();
+        return femaleKeywords.some((kw) => lower.includes(kw));
       };
 
-      const maleKeywords = ['male', 'man', 'boy', 'guy', 'david', 'george', 'ravi', 'madhav', 'neil', 'ajay', 'rahul', 'amit', 'google हिन्दी', 'google nepali', 'natural'];
+      // 2. Comprehensive Male Voice Identifiers (Strictly prioritize boy/male voice)
+      const maleKeywords = [
+        'male', 'man', 'boy', 'guy', 'david', 'george', 'ravi', 'madhav', 'neil', 'ajay',
+        'rahul', 'amit', 'tarun', 'pradeep', 'suresh', 'rohit', 'vikram', 'kishore',
+        'manoj', 'deepak', 'anand', 'arjun', 'rajesh', 'prakash', 'ramesh', 'sunil',
+        'anil', 'hemant', 'ashok', 'vijay', 'sanjay', 'satish', 'vinod', 'mahesh',
+        'naresh', 'dinesh', 'kamal', 'santosh', 'harish', 'gopal', 'brijesh', 'mohan',
+        'krishna', 'govind', 'shyam', 'shankar', 'vishnu', 'brahma', 'ganesh', 'narayan',
+        'bhupendra', 'bharat', 'hi-in-x-hia', 'hi-in-x-hie', 'en-in-x-end', 'en-in-x-ene',
+        'ne-np-x-nem', 'standard-b', 'wavenet-b', 'neural2-b', 'standard-d', 'wavenet-d', 'neural2-d'
+      ];
+
       const isMale = (v: SpeechSynthesisVoice) => {
-        const lowerName = (v.name + ' ' + (v.voiceURI || '')).toLowerCase();
-        return maleKeywords.some(kw => lowerName.includes(kw)) && !isFemale(v);
+        const lower = `${v.name} ${v.voiceURI || ''}`.toLowerCase();
+        return maleKeywords.some((kw) => lower.includes(kw)) && !isFemale(v);
       };
 
-      // 1. Explicit Nepali Male voices if present
-      const nepaliMaleVoices = this.voices.filter(v => (v.lang.startsWith('ne') || v.name.toLowerCase().includes('nepali')) && !isFemale(v));
-      
-      // 2. Hindi/Regional Male voices (very natural in Nepali accent on Android/Chrome)
-      const hindiMaleVoices = this.voices.filter(v => (v.lang.startsWith('hi') || v.lang.startsWith('mr') || v.lang.startsWith('bn')) && isMale(v));
-      const hindiAnyNonFemale = this.voices.filter(v => (v.lang.startsWith('hi') || v.lang.startsWith('mr')) && !isFemale(v));
+      // Filter non-female voices
+      const allNonFemaleVoices = this.voices.filter((v) => !isFemale(v));
 
-      // 3. System-wide Young Male voices
-      const generalMaleVoices = this.voices.filter(v => isMale(v));
+      // Prioritized Selection for Male / Boy Voice:
+      // Priority 1: Nepali Male Voice
+      const nepaliMale = allNonFemaleVoices.filter(
+        (v) => (v.lang.startsWith('ne') || v.name.toLowerCase().includes('nepali')) && isMale(v)
+      );
+      const nepaliAnyNonFemale = allNonFemaleVoices.filter(
+        (v) => v.lang.startsWith('ne') || v.name.toLowerCase().includes('nepali')
+      );
+
+      // Priority 2: Hindi/Regional Male Voice (Super natural for Nepali pronunciation on Android)
+      const hindiMale = allNonFemaleVoices.filter(
+        (v) => (v.lang.startsWith('hi') || v.lang.startsWith('mr') || v.lang.startsWith('bn')) && isMale(v)
+      );
+      const hindiAnyNonFemale = allNonFemaleVoices.filter(
+        (v) => v.lang.startsWith('hi') || v.lang.startsWith('mr')
+      );
+
+      // Priority 3: Indian English Male Voice
+      const indianEnglishMale = allNonFemaleVoices.filter(
+        (v) => v.lang.includes('IN') && isMale(v)
+      );
+
+      // Priority 4: Any system Male voice
+      const generalMale = allNonFemaleVoices.filter((v) => isMale(v));
 
       let chosenVoice: SpeechSynthesisVoice | null = null;
 
-      if (nepaliMaleVoices.length > 0) {
-        chosenVoice = nepaliMaleVoices[0];
+      if (nepaliMale.length > 0) {
+        chosenVoice = nepaliMale[0];
         utterance.lang = 'ne-NP';
-      } else if (hindiMaleVoices.length > 0) {
-        chosenVoice = hindiMaleVoices[0];
+      } else if (hindiMale.length > 0) {
+        chosenVoice = hindiMale[0];
         utterance.lang = 'hi-IN';
+      } else if (nepaliAnyNonFemale.length > 0) {
+        chosenVoice = nepaliAnyNonFemale[0];
+        utterance.lang = 'ne-NP';
       } else if (hindiAnyNonFemale.length > 0) {
         chosenVoice = hindiAnyNonFemale[0];
         utterance.lang = 'hi-IN';
-      } else if (generalMaleVoices.length > 0) {
-        chosenVoice = generalMaleVoices[0];
+      } else if (indianEnglishMale.length > 0) {
+        chosenVoice = indianEnglishMale[0];
+        utterance.lang = chosenVoice.lang;
+      } else if (generalMale.length > 0) {
+        chosenVoice = generalMale[0];
         utterance.lang = chosenVoice.lang || 'ne-NP';
+      } else if (allNonFemaleVoices.length > 0) {
+        chosenVoice = allNonFemaleVoices[0];
       }
 
       if (chosenVoice) {
         utterance.voice = chosenVoice;
       }
 
-      // Exact acoustic profile for a lively, authentic 17-year-old teenage boy
-      utterance.pitch = this.settings.pitch; // 0.96 for natural crisp boy timbre (not squeaky/female)
-      utterance.rate = this.settings.rate;   // 1.05 for energetic youthful pace
+      // Exact acoustic calibration for a natural 17yo male teenager (केटाको स्पष्ट आवाज)
+      // Pitch: 0.88 - 0.92 gives authentic male resonance and avoids squeakiness or female pitch
+      const activePitch = Math.min(1.05, Math.max(0.75, this.settings.pitch));
+      utterance.pitch = activePitch;
+      utterance.rate = this.settings.rate;
       utterance.volume = this.settings.volume;
 
       utterance.onstart = () => {
         this.isSpeaking = true;
-        this.playTone(480, 0.04); // Youthful crisp wake chime
+        this.playTone(460, 0.04);
         if (this.onSpeakingStateChange) {
           this.onSpeakingStateChange(true);
         }

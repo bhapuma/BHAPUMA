@@ -27,7 +27,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ onClose, onOpenAvyan }) 
         <div className="flex flex-col items-center text-center p-4 rounded-2xl bg-gradient-to-b from-cyan-950/30 to-black border border-cyan-500/20 mb-4">
           <div className="w-20 h-20 rounded-full p-[2px] bg-gradient-to-tr from-cyan-400 via-indigo-500 to-amber-400 shadow-[0_0_25px_rgba(6,182,212,0.4)] mb-3">
             <img
-              src={BHAPUMA_NEON_ICON_URL}
+              src={AVYAN_PROFILE_AVATAR_URL}
               alt="Bharat Pun Magar (BHAPUMA)"
               referrerPolicy="no-referrer"
               className="w-full h-full object-cover rounded-full"
