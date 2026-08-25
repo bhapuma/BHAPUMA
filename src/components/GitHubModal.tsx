@@ -19,10 +19,8 @@ import {
   Download,
   Box,
   KeyRound,
-  Eye,
-  EyeOff,
-  Radio,
-  Check,
+  ArrowRight,
+  PlusCircle,
 } from 'lucide-react';
 import { GitHubStatusInfo, GitHubBuildStatusResponse } from '../types';
 
@@ -43,7 +41,7 @@ export const GitHubModal: React.FC<GitHubModalProps> = ({ onClose }) => {
   const [repoInput, setRepoInput] = useState('');
   const [branchInput, setBranchInput] = useState('main');
   const [commitMessage, setCommitMessage] = useState(
-    `BHAPUMA AI Assistant Android Update [${new Date().toISOString().split('T')[0]}]`
+    `BHAPUMA AI Assistant Android Release [${new Date().toISOString().replace('T', ' ').substring(0, 19)}]`
   );
   const [tokenInput, setTokenInput] = useState('');
   const [readOnlyTokenInput, setReadOnlyTokenInput] = useState('');
@@ -51,7 +49,7 @@ export const GitHubModal: React.FC<GitHubModalProps> = ({ onClose }) => {
   const [showReadOnlyTokenInput, setShowReadOnlyTokenInput] = useState(false);
   const [saveReadOnlyTokenSession, setSaveReadOnlyTokenSession] = useState(true);
 
-  // Active Tab
+  // Active Tab: 'status' | 'push' | 'runs'
   const [activeTab, setActiveTab] = useState<'status' | 'push' | 'runs'>('status');
 
   // Load saved session read-only token from sessionStorage
@@ -108,7 +106,6 @@ export const GitHubModal: React.FC<GitHubModalProps> = ({ onClose }) => {
         if (data.status.currentBranch) {
           setBranchInput(data.status.currentBranch);
         }
-        // Also trigger build status check if repo is connected
         if (data.status.connectedRepoName) {
           fetchBuildStatus(data.status.connectedRepoName);
         }
@@ -140,7 +137,7 @@ export const GitHubModal: React.FC<GitHubModalProps> = ({ onClose }) => {
     fetchBuildStatus(undefined, readOnlyTokenInput.trim());
   };
 
-  // Handle Commit & Push to GitHub
+  // Handle Commit & Push to GitHub (Generates new Release APK via GitHub Actions)
   const handlePush = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!repoInput.trim()) {
@@ -153,13 +150,15 @@ export const GitHubModal: React.FC<GitHubModalProps> = ({ onClose }) => {
       setErrorMsg(null);
       setSuccessMsg(null);
 
+      const dynamicCommitMessage = commitMessage.trim() || `BHAPUMA AI Assistant Android Release [${new Date().toISOString().replace('T', ' ').substring(0, 19)}]`;
+
       const res = await fetch('/api/github/push', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           repoUrl: repoInput.trim(),
           branch: branchInput.trim() || 'main',
-          commitMessage: commitMessage.trim(),
+          commitMessage: dynamicCommitMessage,
           token: tokenInput.trim() || undefined,
           authorName: 'Bharat Pun Magar (BHAPUMA)',
           authorEmail: 'bhapuma.official@gmail.com',
@@ -172,12 +171,12 @@ export const GitHubModal: React.FC<GitHubModalProps> = ({ onClose }) => {
         throw new Error(data.error || 'GitHub Push अयशस्वी भयो।');
       }
 
-      setSuccessMsg(data.message || 'Android Project सफलतापूर्वक GitHub मा Push भयो!');
+      setSuccessMsg('नयाँ कोड GitHub मा सफलतापुर्वक Push भयो! GitHub Actions ले नयाँ Android APK Release बनाउन सुरु गरेको छ।');
       // Clear sensitive push token from memory
       setTokenInput('');
       await fetchStatus();
       setActiveTab('runs');
-      // Re-fetch build status
+      // Re-fetch build status after short delay
       setTimeout(() => {
         fetchBuildStatus(repoInput.trim());
       }, 2000);
@@ -189,7 +188,7 @@ export const GitHubModal: React.FC<GitHubModalProps> = ({ onClose }) => {
     }
   };
 
-  // Disconnect / Change GitHub Repository
+  // Disconnect / Change GitHub Repository and open push screen for new repo
   const handleDisconnect = async () => {
     try {
       setLoading(true);
@@ -200,8 +199,10 @@ export const GitHubModal: React.FC<GitHubModalProps> = ({ onClose }) => {
       if (data.success) {
         setRepoInput('');
         setBuildStatusData(null);
-        setSuccessMsg('GitHub Repository सफलतापूर्वक Disconnect गरियो। तपाईं अब नयाँ Repository जोड्न सक्नुहुन्छ।');
+        setCommitMessage(`BHAPUMA AI Assistant New Release [${new Date().toISOString().replace('T', ' ').substring(0, 19)}]`);
+        setSuccessMsg('GitHub Repository सफलतापूर्वक Disconnect भयो। नयाँ Repository नाम राखी "Push & Release New APK" थिच्नुहोस्।');
         await fetchStatus();
+        setActiveTab('push');
       }
     } catch (err: any) {
       setErrorMsg('Disconnect गर्न सकिएन।');
@@ -223,7 +224,7 @@ export const GitHubModal: React.FC<GitHubModalProps> = ({ onClose }) => {
             </div>
             <div>
               <h2 className="text-base font-extrabold text-white tracking-wide flex items-center gap-2">
-                <span>GitHub Actions & Push</span>
+                <span>GitHub Actions & APK Release</span>
                 {buildStatusData?.connected && (
                   <span className="flex h-2 w-2 relative">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -232,7 +233,7 @@ export const GitHubModal: React.FC<GitHubModalProps> = ({ onClose }) => {
                 )}
               </h2>
               <p className="text-xs text-zinc-400">
-                Android APK अटोमेशन, लाइभ बिल्ड स्थिति र कोड व्यवस्थापन
+                GitHub मा Push गरि स्वतः नयाँ Android APK Release बनाउनुहोस्
               </p>
             </div>
           </div>
@@ -268,7 +269,7 @@ export const GitHubModal: React.FC<GitHubModalProps> = ({ onClose }) => {
             }`}
           >
             <UploadCloud className="w-3.5 h-3.5" />
-            <span>Push Code</span>
+            <span>Push & Release New APK</span>
           </button>
           <button
             type="button"
@@ -298,7 +299,7 @@ export const GitHubModal: React.FC<GitHubModalProps> = ({ onClose }) => {
               <div className="flex-1">
                 <p className="font-semibold">{successMsg}</p>
                 <p className="text-[11px] text-emerald-400/80 mt-1">
-                  GitHub Actions ले अब स्वचालित रूपमा Android APK कम्पाइल गर्दैछ। तलको <b>"Actions History & APKs"</b> ट्याबमा प्रत्यक्ष स्थिति हेर्नुहोस्।
+                  GitHub Actions ले स्वचालित रूपमा <b>Android APK Release</b> कम्पाइल गर्दैछ।
                 </p>
               </div>
             </div>
@@ -311,7 +312,7 @@ export const GitHubModal: React.FC<GitHubModalProps> = ({ onClose }) => {
               <div className="flex-1">
                 <p className="font-semibold">{errorMsg}</p>
                 <p className="text-[11px] text-rose-300/80 mt-1">
-                  यदि रिपो Private छ भने तलको <b>"Read-Only GitHub Token"</b> वा <b>"Push Token"</b> थप्नुहोस्।
+                  यदि रिपो Private छ भने तलको <b>"Read-Only Token"</b> वा <b>"Push Token"</b> थप्नुहोस्।
                 </p>
               </div>
             </div>
@@ -320,7 +321,7 @@ export const GitHubModal: React.FC<GitHubModalProps> = ({ onClose }) => {
           {/* ================= TAB 1: STATUS & LATEST BUILD ================= */}
           {activeTab === 'status' && (
             <div className="space-y-3">
-              {/* Status Indicator Card (Prompt Requirement #10) */}
+              {/* Status Indicator Card */}
               <div className="p-4 rounded-2xl bg-gradient-to-b from-white/[0.04] to-transparent border border-white/10">
                 <div className="flex items-center justify-between mb-3">
                   <span className="font-bold text-zinc-200 flex items-center gap-1.5">
@@ -395,32 +396,54 @@ export const GitHubModal: React.FC<GitHubModalProps> = ({ onClose }) => {
                   </div>
                 </div>
 
-                {/* Change GitHub Button (Prompt Requirement #3 & #11) */}
-                {gitStatus?.connectedRepoName && (
-                  <div className="mt-3 pt-2.5 border-t border-white/5 flex items-center justify-between flex-wrap gap-2">
-                    <a
-                      href={`https://github.com/${gitStatus.connectedRepoName}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs text-cyan-400 hover:underline flex items-center gap-1"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      <span>GitHub Repo खोल्नुहोस् ({gitStatus.connectedRepoName})</span>
-                    </a>
+                {/* Change GitHub Button & Direct Push Action */}
+                <div className="mt-3 pt-2.5 border-t border-white/5 flex items-center justify-between flex-wrap gap-2">
+                  {gitStatus?.connectedRepoName ? (
+                    <>
+                      <a
+                        href={`https://github.com/${gitStatus.connectedRepoName}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs text-cyan-400 hover:underline flex items-center gap-1"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>Repo खोल्नुहोस् ({gitStatus.connectedRepoName})</span>
+                      </a>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('push')}
+                          className="px-3 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-cyan-500/20 cursor-pointer"
+                        >
+                          <UploadCloud className="w-3.5 h-3.5" />
+                          <span>Push New APK</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleDisconnect}
+                          disabled={loading || pushing}
+                          className="px-2.5 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer"
+                          title="अर्को नयाँ रिपोजिटरी जोड्नुहोस्"
+                        >
+                          <Unlink className="w-3.5 h-3.5" />
+                          <span>Change GitHub</span>
+                        </button>
+                      </div>
+                    </>
+                  ) : (
                     <button
                       type="button"
-                      onClick={handleDisconnect}
-                      disabled={loading || pushing}
-                      className="px-3 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+                      onClick={() => setActiveTab('push')}
+                      className="w-full py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
                     >
-                      <Unlink className="w-3.5 h-3.5" />
-                      <span>Change GitHub (रिपोजिटरी फेर्नुहोस्)</span>
+                      <PlusCircle className="w-4 h-4" />
+                      <span>GitHub Repository जोड्नुहोस् र नयाँ APK Push गर्नुहोस्</span>
                     </button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
 
-              {/* LATEST GITHUB ACTIONS BUILD STATUS CARD (From GitHub API) */}
+              {/* LATEST GITHUB ACTIONS BUILD STATUS CARD */}
               <div className="p-4 rounded-2xl bg-cyan-950/20 border border-cyan-500/30 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-cyan-300 flex items-center gap-1.5 text-xs sm:text-sm">
@@ -549,7 +572,7 @@ export const GitHubModal: React.FC<GitHubModalProps> = ({ onClose }) => {
           {/* ================= TAB 2: PUSH COMPLETE ANDROID PROJECT ================= */}
           {activeTab === 'push' && (
             <form onSubmit={handlePush} className="space-y-3.5">
-              {/* Repository Input (Prompt Requirement #2) */}
+              {/* Repository Input */}
               <div>
                 <label className="block text-xs font-bold text-zinc-300 mb-1.5">
                   GitHub Repository (Owner/Repository Name) <span className="text-rose-400">*</span>
@@ -586,7 +609,7 @@ export const GitHubModal: React.FC<GitHubModalProps> = ({ onClose }) => {
                 <div className="sm:col-span-2">
                   <label className="block text-xs font-bold text-zinc-300 mb-1.5 flex items-center gap-1">
                     <FileCheck className="w-3.5 h-3.5 text-cyan-400" />
-                    <span>Commit Message</span>
+                    <span>Commit / Release Message</span>
                   </label>
                   <input
                     type="text"
@@ -598,7 +621,7 @@ export const GitHubModal: React.FC<GitHubModalProps> = ({ onClose }) => {
                 </div>
               </div>
 
-              {/* Optional Secure Push Token Accordion (Prompt Requirement #12) */}
+              {/* Optional Secure Push Token Accordion */}
               <div className="rounded-xl bg-white/[0.02] border border-white/5 p-3">
                 <button
                   type="button"
@@ -624,35 +647,35 @@ export const GitHubModal: React.FC<GitHubModalProps> = ({ onClose }) => {
                       className="w-full px-3 py-2 rounded-lg bg-black/60 border border-white/10 text-white text-xs font-mono placeholder:text-zinc-600 focus:outline-none focus:border-cyan-400"
                     />
                     <p className="text-[10px] text-zinc-500">
-                      * टोकन कोड वा फाइलमा कहिल्यै सेभ गरिँदैन। यो केवल Push प्रमाणीकरणका लागि प्रयोग हुन्छ।
+                      * टोकन कोड वा फाइलमा कहिल्यै सेभ गरिँदैन। यो केवल सुरक्षित Push प्रमाणीकरणका लागि प्रयोग हुन्छ।
                     </p>
                   </div>
                 )}
               </div>
 
-              {/* Android & APK Build Integrity Checklist (Prompt Requirement #9) */}
+              {/* Android & APK Build Integrity Checklist */}
               <div className="p-3 rounded-xl bg-cyan-950/20 border border-cyan-500/20 text-[11px] text-zinc-300 space-y-1.5">
                 <div className="font-bold text-cyan-300 flex items-center gap-1">
                   <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>APK Build Automation Verified:</span>
+                  <span>APK Release Automation Status:</span>
                 </div>
                 <ul className="grid grid-cols-2 gap-1 text-[11px] text-zinc-400">
                   <li className="flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-400" /> AndroidManifest.xml
+                    <CheckCircle2 className="w-3 h-3 text-emerald-400" /> Capacitor Android Project
                   </li>
                   <li className="flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-400" /> Gradle 8.2 & Wrapper
+                    <CheckCircle2 className="w-3 h-3 text-emerald-400" /> Gradle 8.2 Clean Build
                   </li>
                   <li className="flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3 text-emerald-400" /> .github/workflows/android.yml
                   </li>
                   <li className="flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-400" /> Auto Release APK
+                    <CheckCircle2 className="w-3 h-3 text-emerald-400" /> Auto Release APK to GitHub
                   </li>
                 </ul>
               </div>
 
-              {/* Submit Push Button (Prompt Requirement #1 & #6) */}
+              {/* Submit Push Button */}
               <button
                 type="submit"
                 disabled={pushing || loading || !repoInput.trim()}
@@ -661,12 +684,12 @@ export const GitHubModal: React.FC<GitHubModalProps> = ({ onClose }) => {
                 {pushing ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Syncing & Pushing to GitHub...</span>
+                    <span>Syncing, Pushing & Triggering APK Release...</span>
                   </>
                 ) : (
                   <>
                     <UploadCloud className="w-4 h-4" />
-                    <span>Push Complete Android Project to GitHub</span>
+                    <span>Push & Trigger New APK Release</span>
                   </>
                 )}
               </button>
@@ -721,7 +744,7 @@ export const GitHubModal: React.FC<GitHubModalProps> = ({ onClose }) => {
                               : 'bg-amber-500/20 text-amber-300'
                           }`}
                         >
-                          {run.status === 'in_progress' ? 'Running' : run.conclusion || run.status}
+                          {run.status === 'in_progress' ? 'Building APK...' : run.conclusion || run.status}
                         </span>
                       </div>
 
@@ -746,7 +769,7 @@ export const GitHubModal: React.FC<GitHubModalProps> = ({ onClose }) => {
                 <div className="p-5 rounded-2xl bg-black/40 border border-white/5 text-center text-zinc-400 text-xs space-y-2">
                   <p>अहिलेसम्म कुनै रन रेकर्ड भएको छैन।</p>
                   <p className="text-[11px] text-zinc-500">
-                    कोड पुश गरेपछि GitHub Actions ले स्वतः APK कम्पाइल गर्न सुरु गर्नेछ।
+                    कोड पुश गरेपछि GitHub Actions ले स्वतः नयाँ Android APK कम्पाइल गर्न सुरु गर्नेछ।
                   </p>
                 </div>
               )}
