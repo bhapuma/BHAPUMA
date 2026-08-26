@@ -90,15 +90,18 @@ export const BhapumaOrb: React.FC<BhapumaOrbProps> = ({
       const particleCount = state === 'THINKING' ? 18 : 24;
       for (let i = 0; i < particleCount; i++) {
         const theta = (i / particleCount) * Math.PI * 2 + angle;
-        const waveOffset = Math.sin(theta * 3 + angle * 2) * (10 + soundIntensity * 28);
+        // In IDLE state, give a soft breathing wave to make it feel alive and responsive
+        const idlePulse = state === 'IDLE' ? Math.sin(angle * 1.5) * 3 : 0;
+        const waveOffset = Math.sin(theta * 3 + angle * 2) * (10 + soundIntensity * 28) + idlePulse;
         const radius = baseRadius + 18 + waveOffset;
         const x = centerX + Math.cos(theta) * radius;
         const y = centerY + Math.sin(theta) * radius;
 
         ctx.beginPath();
-        ctx.arc(x, y, 2.5 + soundIntensity * 3.5, 0, Math.PI * 2);
+        const particleSize = state === 'IDLE' ? 2.2 + Math.sin(angle * 2 + i) * 0.8 : 2.5 + soundIntensity * 3.5;
+        ctx.arc(x, y, Math.max(1, particleSize), 0, Math.PI * 2);
         ctx.fillStyle = i % 2 === 0 ? primaryColor + '0.9)' : accentColor + '0.9)';
-        ctx.shadowBlur = 12;
+        ctx.shadowBlur = state === 'IDLE' ? 14 + Math.sin(angle * 2) * 6 : 12;
         ctx.shadowColor = primaryColor + '1)';
         ctx.fill();
         ctx.shadowBlur = 0;
@@ -189,9 +192,14 @@ export const BhapumaOrb: React.FC<BhapumaOrbProps> = ({
               ? 'bg-gradient-to-tr from-amber-900/60 via-zinc-950/90 to-amber-600/30 border border-amber-500/40 shadow-[0_0_30px_rgba(245,158,11,0.3)]'
               : state === 'ERROR'
               ? 'bg-gradient-to-tr from-rose-950/80 via-zinc-950/90 to-rose-600/40 border border-rose-500/50 shadow-[0_0_35px_rgba(239,68,68,0.4)]'
-              : 'bg-gradient-to-tr from-cyan-950/40 via-zinc-900/90 to-indigo-950/40 border border-cyan-500/30 shadow-[0_0_35px_rgba(6,182,212,0.25)] group-hover:border-cyan-400 group-hover:shadow-[0_0_45px_rgba(6,182,212,0.45)]'
+              : 'bg-gradient-to-tr from-cyan-950/50 via-zinc-900/90 to-indigo-950/50 border border-cyan-500/40 shadow-[0_0_35px_rgba(6,182,212,0.35)] animate-[pulse_3.5s_ease-in-out_infinite] group-hover:border-cyan-400 group-hover:shadow-[0_0_50px_rgba(6,182,212,0.55)]'
           }`}
         >
+          {/* Subtle Breathing Ambient Halo for IDLE State */}
+          {state === 'IDLE' && (
+            <div className="absolute -inset-3 rounded-full bg-cyan-500/10 blur-md pointer-events-none animate-pulse -z-10" />
+          )}
+
           {/* Internal core light ring */}
           <div className="absolute inset-2 rounded-full border border-white/15 backdrop-blur-sm pointer-events-none" />
           

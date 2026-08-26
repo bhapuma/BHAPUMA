@@ -15,6 +15,7 @@ import { PermissionsModal } from './components/PermissionsModal';
 import { AboutModal } from './components/AboutModal';
 import { ChatInputBar } from './components/ChatInputBar';
 import { ResponseCard } from './components/ResponseCard';
+import { OfflineCommandsCard } from './components/OfflineCommandsCard';
 
 import {
   AssistantState,
@@ -670,6 +671,15 @@ export default function App() {
             </button>
           ))}
         </div>
+
+        {/* Offline Commands Suggestion Card (Appears when internet is disconnected) */}
+        <OfflineCommandsCard
+          isOnline={telemetry.isOnline}
+          onExecuteCommand={(cmd) => {
+            speechEngine.initAudioContext();
+            processUserQuery(cmd);
+          }}
+        />
 
         {/* Interactive Response Display Card */}
         {(lastUserQuery || lastAssistantResponse) && (
