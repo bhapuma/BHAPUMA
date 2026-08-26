@@ -1,7 +1,7 @@
 import React from 'react';
 import { ExternalLink, UserCheck, Sparkles } from 'lucide-react';
 
-const AVYAN_PROFILE_AVATAR_URL = 'https://i.postimg.cc/NM3bpncb/d4595745d5fa611b8f8da9861b2cf43d-0.webp';
+const AVYAN_PROFILE_AVATAR_URL = 'https://i.postimg.cc/ry98qSYd/file-0000000039f48208a70f87b0d1d2e71c.png';
 
 interface AvyanProfileCardProps {
   onOpenProfile: () => void;

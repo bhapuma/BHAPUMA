@@ -346,9 +346,9 @@ app.post("/api/assistant/chat", async (req, res) => {
       parts: [{ text: contextPrompt }],
     });
 
-    // Try Primary Model (gemini-3.7-flash), then fallback to gemini-3.1-pro-preview or gemini-3.1-flash-lite if 503/high-demand occurs
+    // Try Primary Model (gemini-3.7-flash), then fallback to gemini-3.1-flash-lite
     let response: any;
-    const candidateModels = ["gemini-3.7-flash", "gemini-3.1-pro-preview", "gemini-3.1-flash-lite"];
+    const candidateModels = ["gemini-3.7-flash", "gemini-3.1-flash-lite"];
 
     let lastError: any = null;
     for (const modelName of candidateModels) {
@@ -365,8 +365,8 @@ app.post("/api/assistant/chat", async (req, res) => {
         if (response) break;
       } catch (err: any) {
         lastError = err;
-        console.warn(`Model ${modelName} attempt failed (${err?.status || err?.code || err?.message}). Trying next candidate...`);
-        // If it was a tools format error, attempt without tools
+        console.warn(`Model ${modelName} with tools failed (${err?.status || err?.code || err?.message}). Retrying text-only...`);
+        // If it was a tools format error, attempt text-only
         try {
           response = await ai.models.generateContent({
             model: modelName,
@@ -379,7 +379,7 @@ app.post("/api/assistant/chat", async (req, res) => {
           if (response) break;
         } catch (innerErr: any) {
           lastError = innerErr;
-          console.warn(`Model ${modelName} retry without tools also failed:`, innerErr?.message);
+          console.warn(`Model ${modelName} retry text-only also failed:`, innerErr?.message);
         }
       }
     }
@@ -399,8 +399,8 @@ app.post("/api/assistant/chat", async (req, res) => {
     console.error("Gemini Chat Error:", error);
     res.status(200).json({
       fallback: true,
-      error: error.message || "High demand",
-      text: "हजुर! म सुन्दैछु, के सहयोग गरूँ?",
+      error: error.message || "Network issue",
+      text: "माफ गर्नुहोस् दाजु, यो प्रश्नको जवाफ खोज्न इन्टरनेट वा एआई सर्भरमा केही समय लाग्यो। कृपया पुनः सोध्नुहोस्!",
       functionCalls: [],
     });
   }

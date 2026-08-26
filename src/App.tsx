@@ -13,6 +13,8 @@ import { SettingsModal } from './components/SettingsModal';
 import { MemoryModal } from './components/MemoryModal';
 import { PermissionsModal } from './components/PermissionsModal';
 import { AboutModal } from './components/AboutModal';
+import { ChatInputBar } from './components/ChatInputBar';
+import { ResponseCard } from './components/ResponseCard';
 
 import {
   AssistantState,
@@ -66,9 +68,11 @@ export default function App() {
     cameraTorch: true,
   });
 
-  // Transient Voice Transcript (Subtle, non-intrusive banner)
+  // Transient Voice Transcript & Interactive Response State
   const [liveTranscript, setLiveTranscript] = useState('');
   const [spokenFeedback, setSpokenFeedback] = useState('');
+  const [lastUserQuery, setLastUserQuery] = useState('');
+  const [lastAssistantResponse, setLastAssistantResponse] = useState('');
   const transcriptTimeoutRef = useRef<any>(null);
 
   // Active Dialogs & Modals
@@ -430,20 +434,22 @@ export default function App() {
   // Main Query Processing (Ultra-Fast Real-Time Live Voice & Smart Dispatch)
   const processUserQuery = useCallback(
     async (text: string) => {
-      if (!text.trim()) return;
+      const cleanText = text.trim();
+      if (!cleanText) return;
 
-      // Immediately stop any prior speech & acknowledge to feel human-like instant
+      // Immediately stop any prior speech
       speechEngine.stopSpeaking();
 
-      // Show transcript immediately
-      setLiveTranscript(text);
+      // Show query and transient banner
+      setLastUserQuery(cleanText);
+      setLiveTranscript(cleanText);
       if (transcriptTimeoutRef.current) clearTimeout(transcriptTimeoutRef.current);
       transcriptTimeoutRef.current = setTimeout(() => {
         setLiveTranscript('');
-      }, 6000);
+      }, 5000);
 
-      // 1. Instant local matching for fast device & offline commands (Instant 0ms latency)
-      const offlineResult = parseLocalOfflineCommand(text, {
+      // 1. Instant local matching for fast device, offline & smart knowledge questions (0ms latency)
+      const offlineResult = parseLocalOfflineCommand(cleanText, {
         batteryLevel: telemetry.batteryLevel,
         isCharging: telemetry.isCharging,
         volumeLevel: telemetry.volumeLevel,
@@ -476,23 +482,24 @@ export default function App() {
           window.open('https://avyan.app/u/bharat.pun.magar', '_blank');
         }
 
+        setLastAssistantResponse(offlineResult.nepaliResponse);
         await respondWithVoice(offlineResult.nepaliResponse);
         return;
       }
 
-      // 2. Real-Time Gemini Live Flow
+      // 2. Real-Time Gemini AI Dispatch
       setAssistantState('THINKING');
 
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 6000);
+        const timeoutId = setTimeout(() => controller.abort(), 12000);
 
         const response = await fetch('/api/assistant/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           signal: controller.signal,
           body: JSON.stringify({
-            prompt: text,
+            prompt: cleanText,
             conversationHistory: conversationHistoryRef.current,
             deviceContext: {
               batteryLevel: telemetry.batteryLevel,
@@ -523,19 +530,20 @@ export default function App() {
         }
 
         if (!replyText) {
-          replyText = 'हजुर, म सुन्दैछु। के मद्दत गरूँ?';
+          replyText = 'हजुर दाजु, मैले तपाईंको कुरा बुझें। म तपाईंलाई थप के सहयोग गरूँ?';
         }
 
         // Save conversation history
-        conversationHistoryRef.current.push({ role: 'user', content: text });
+        conversationHistoryRef.current.push({ role: 'user', content: cleanText });
         conversationHistoryRef.current.push({ role: 'assistant', content: replyText });
 
+        setLastAssistantResponse(replyText);
         await respondWithVoice(replyText);
       } catch (err: any) {
         console.warn('Real-time query fallback to instant natural Nepali response:', err);
         setAssistantState('ERROR');
-        // Intelligent quick response
-        const fallbackText = offlineResult.nepaliResponse || 'हजुर, म सुन्दैछु। भन्नुहोस् त?';
+        const fallbackText = 'नमस्ते दाजु! तपाईंको प्रश्न बुझें। इन्टरनेट वा एआई सर्भरमा केही ढिलाइ भए पनि म तपाईंको सेवामा तयार छु। केही नयाँ सोध्नुहोस् त!';
+        setLastAssistantResponse(fallbackText);
         await respondWithVoice(fallbackText);
       }
     },
@@ -663,9 +671,31 @@ export default function App() {
           ))}
         </div>
 
+        {/* Interactive Response Display Card */}
+        {(lastUserQuery || lastAssistantResponse) && (
+          <ResponseCard
+            userQuery={lastUserQuery}
+            assistantResponse={lastAssistantResponse}
+            isSpeaking={assistantState === 'SPEAKING'}
+          />
+        )}
+
+        {/* Dedicated Chat & Query Input Bar (Type or Voice Ask Anything) */}
+        <div className="w-full mt-2">
+          <ChatInputBar
+            onSendMessage={(query) => {
+              speechEngine.initAudioContext();
+              processUserQuery(query);
+            }}
+            isLoading={assistantState === 'THINKING'}
+            isListening={assistantState === 'LISTENING'}
+            onToggleMic={handleToggleMic}
+          />
+        </div>
+
         {/* Transient Subtitle / Transcript Banner (Zero-Touch / No Clutter) */}
-        {liveTranscript && (
-          <div className="mt-4 px-4 py-2 rounded-2xl bg-cyan-950/40 border border-cyan-500/30 backdrop-blur-md max-w-md mx-auto text-center animate-fadeIn">
+        {liveTranscript && !lastAssistantResponse && (
+          <div className="mt-2 px-4 py-2 rounded-2xl bg-cyan-950/40 border border-cyan-500/30 backdrop-blur-md max-w-md mx-auto text-center animate-fadeIn">
             <span className="text-xs text-cyan-300 font-semibold flex items-center justify-center gap-1.5">
               <Sparkles className="w-3 h-3 text-cyan-400 animate-spin" />
               <span>"{liveTranscript}"</span>
@@ -673,17 +703,8 @@ export default function App() {
           </div>
         )}
 
-        {/* Spoken Response Feedback Banner (if speaking) */}
-        {assistantState === 'SPEAKING' && spokenFeedback && (
-          <div className="mt-3 px-4 py-2 rounded-2xl bg-blue-950/40 border border-blue-500/30 backdrop-blur-md max-w-md mx-auto text-center animate-fadeIn">
-            <span className="text-xs text-blue-200 font-medium leading-relaxed">
-              {spokenFeedback}
-            </span>
-          </div>
-        )}
-
         {/* AVYAN Profile Link Section (Prompt Requirement #30) */}
-        <div className="w-full mt-6">
+        <div className="w-full mt-4">
           <AvyanProfileCard
             onOpenProfile={() => {
               window.open('https://avyan.app/u/bharat.pun.magar', '_blank');

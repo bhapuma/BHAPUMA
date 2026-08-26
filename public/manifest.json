@@ -1,0 +1,23 @@
+{
+  "name": "BHAPUMA AI Assistant",
+  "short_name": "BHAPUMA",
+  "description": "Bharat Pun Magar - 17-Year-Old Advanced Android AI Voice Assistant",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#030306",
+  "theme_color": "#06b6d4",
+  "icons": [
+    {
+      "src": "https://i.postimg.cc/ry98qSYd/file-0000000039f48208a70f87b0d1d2e71c.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://i.postimg.cc/ry98qSYd/file-0000000039f48208a70f87b0d1d2e71c.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 import { ContactItem, InstalledApp, UserMemory } from '../types';
 import { getNaturalNepaliDate, getNaturalNepaliTime } from './nepaliTime';
+import { evaluateSmartKnowledge } from './knowledgeBase';
 
 // Default installed applications for Android simulation & real URL intents
 export const DEFAULT_INSTALLED_APPS: InstalledApp[] = [
@@ -303,7 +304,7 @@ export async function getRealBatteryInfo(): Promise<{
   };
 }
 
-// Local Offline Command Parser
+// Local Offline Command & Smart Knowledge Parser
 export function parseLocalOfflineCommand(
   text: string,
   state: {
@@ -323,37 +324,23 @@ export function parseLocalOfflineCommand(
 } {
   const lower = text.toLowerCase().trim();
 
-  // 1. Direct Wake Word & Name Calls (भरत, भपुम, ह्याकर, कम्प्युटर)
-  // Check if input is a greeting or direct name call
-  const isDirectCall =
-    lower.length < 30 &&
-    (lower.startsWith('हे ') ||
-      lower.startsWith('सुन ') ||
-      lower.startsWith('ओई ') ||
-      lower.startsWith('नमस्ते ') ||
-      lower.startsWith('hey ') ||
-      lower === 'भरत' ||
-      lower === 'भपुम' ||
-      lower === 'भपुमा' ||
-      lower === 'ह्याकर' ||
-      lower === 'कम्प्युटर' ||
-      lower === 'bharat' ||
-      lower === 'bhapuma' ||
-      lower === 'hacker' ||
-      lower === 'computer' ||
-      lower.includes('सुन त') ||
-      lower.includes('के छ') ||
-      lower.includes('कस्तो छ'));
+  // 1. Check Smart Conversational & Knowledge Engine First (Instant Nepali Q&A, math, jokes, greetings)
+  const smartResult = evaluateSmartKnowledge(text, {
+    batteryLevel: state.batteryLevel,
+    isCharging: state.isCharging,
+    userName: state.memory.userName || state.memory.nickname,
+  });
 
-  if (isDirectCall) {
+  if (smartResult.matched) {
     return {
       handled: true,
-      nepaliResponse: 'हजुर, भन्नुहोस्! म सुन्दैछु, के सहयोग गरूँ?',
-      action: 'wake_assistant',
+      nepaliResponse: smartResult.text,
+      action: smartResult.action || 'smart_knowledge',
+      payload: smartResult.payload,
     };
   }
 
-  // Battery status
+  // 2. Battery status query
   if (lower.includes('battery') || lower.includes('ब्याट्री') || lower.includes('चार्ज') || lower.includes('charge')) {
     const status = state.isCharging ? 'चार्ज भइरहेको छ' : 'डिस्चार्ज अवस्थामा छ';
     return {
@@ -363,7 +350,7 @@ export function parseLocalOfflineCommand(
     };
   }
 
-  // Time
+  // 3. Time query
   if (lower.includes('time') || lower.includes('समय') || lower.includes('बज्यो') || lower.includes('कति बज्यो')) {
     const timeInfo = getNaturalNepaliTime();
     return {
@@ -373,7 +360,7 @@ export function parseLocalOfflineCommand(
     };
   }
 
-  // Date
+  // 4. Date query
   if (lower.includes('date') || lower.includes('मिति') || lower.includes('बार') || lower.includes('गते')) {
     const dateInfo = getNaturalNepaliDate();
     return {
@@ -383,13 +370,14 @@ export function parseLocalOfflineCommand(
     };
   }
 
-  // Flashlight on
+  // 5. Flashlight on
   if (
     lower.includes('flashlight on') ||
     lower.includes('torch on') ||
     lower.includes('टर्च बाल्') ||
     lower.includes('फ्ल्यासलाइट अन') ||
-    lower.includes('बत्ती बाल')
+    lower.includes('बत्ती बाल') ||
+    lower.includes('उज्यालो पार')
   ) {
     return {
       handled: true,
@@ -398,13 +386,14 @@ export function parseLocalOfflineCommand(
     };
   }
 
-  // Flashlight off
+  // 6. Flashlight off
   if (
     lower.includes('flashlight off') ||
     lower.includes('torch off') ||
     lower.includes('टर्च निभा') ||
     lower.includes('फ्ल्यासलाइट अफ') ||
-    lower.includes('बत्ती निभा')
+    lower.includes('बत्ती निभा') ||
+    lower.includes('बत्ती बन्द')
   ) {
     return {
       handled: true,
@@ -413,7 +402,7 @@ export function parseLocalOfflineCommand(
     };
   }
 
-  // Volume
+  // 7. Volume controls
   if (lower.includes('volume') || lower.includes('आवाज') || lower.includes('भोल्युम')) {
     if (lower.includes('बढा') || lower.includes('up') || lower.includes('increase') || lower.includes('high')) {
       return {
@@ -450,15 +439,15 @@ export function parseLocalOfflineCommand(
     };
   }
 
-  // Media
-  if (lower.includes('pause') || lower.includes('रोक्') || lower.includes('बन्द गर')) {
+  // 8. Media controls
+  if (lower.includes('pause') || lower.includes('रोक्') || lower.includes('गीत बन्द')) {
     return {
       handled: true,
       nepaliResponse: 'म्युजिक पज गरिएको छ।',
       action: 'media_pause',
     };
   }
-  if (lower.includes('play') || lower.includes('बजाऊ') || lower.includes('सुरु गर')) {
+  if (lower.includes('play') || lower.includes('गीत बजाऊ') || lower.includes('म्युजिक बजाऊ')) {
     return {
       handled: true,
       nepaliResponse: 'म्युजिक बजाइएको छ।',
@@ -466,33 +455,27 @@ export function parseLocalOfflineCommand(
     };
   }
 
-  // Avyan Profile
-  if (lower.includes('avyan') || lower.includes('profile') || lower.includes('भरत पुन') || lower.includes('bharat')) {
-    return {
-      handled: true,
-      nepaliResponse: 'भरत पुन मगरको AVYAN Profile खोल्दैछु।',
-      action: 'open_avyan',
-    };
-  }
-
-  // App opening
-  for (const app of state.installedApps) {
-    if (
-      lower.includes(app.name.toLowerCase()) ||
-      lower.includes(app.nameNepali.toLowerCase()) ||
-      lower.includes(app.id)
-    ) {
-      return {
-        handled: true,
-        nepaliResponse: `${app.name} एप खोल्दैछु।`,
-        action: 'open_app',
-        payload: app,
-      };
+  // 9. Explicit App opening requests (e.g., 'खोल्', 'open', 'लाग')
+  const isAppOpenRequest = lower.includes('खोल') || lower.includes('open') || lower.includes('चालु') || lower.includes('लञ्च');
+  if (isAppOpenRequest) {
+    for (const app of state.installedApps) {
+      if (
+        lower.includes(app.name.toLowerCase()) ||
+        lower.includes(app.nameNepali.toLowerCase()) ||
+        lower.includes(app.id)
+      ) {
+        return {
+          handled: true,
+          nepaliResponse: `${app.name} एप खोल्दैछु।`,
+          action: 'open_app',
+          payload: app,
+        };
+      }
     }
   }
 
-  // Settings
-  if (lower.includes('setting') || lower.includes('सेटिङ')) {
+  // 10. Settings opening
+  if ((lower.includes('setting') || lower.includes('सेटिङ')) && (lower.includes('खोल') || lower.includes('open'))) {
     return {
       handled: true,
       nepaliResponse: 'एन्ड्रोइड सेटिङ्स खोल्दैछु।',
@@ -500,7 +483,7 @@ export function parseLocalOfflineCommand(
     };
   }
 
-  // Stored Name query
+  // 11. Stored Name query
   if (lower.includes('मेरो नाम') || lower.includes('who am i') || lower.includes('my name')) {
     const userName = state.memory.userName || state.memory.nickname || 'Bharat Pun Magar';
     return {
@@ -510,9 +493,9 @@ export function parseLocalOfflineCommand(
     };
   }
 
-  // Default fallback if offline and not local command
+  // Default: pass to Gemini for conversational intelligence
   return {
     handled: false,
-    nepaliResponse: 'यो काम गर्न इन्टरनेट चाहिन्छ।',
+    nepaliResponse: '',
   };
 }

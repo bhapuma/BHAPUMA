@@ -2,8 +2,8 @@ import React from 'react';
 import { BatteryCharging, Battery, Wifi, WifiOff, Radio, ShieldCheck } from 'lucide-react';
 import { DeviceTelemetry } from '../types';
 
-// URL 2 for Bharat Pun Magar avatar (Top-Left branding & profile)
-const BHARAT_TOP_AVATAR_URL = 'https://i.postimg.cc/NM3bpncb/d4595745d5fa611b8f8da9861b2cf43d-0.webp';
+// Authentic Photo for Bharat Pun Magar avatar (Top-Left branding & profile)
+const BHARAT_TOP_AVATAR_URL = 'https://i.postimg.cc/ry98qSYd/file-0000000039f48208a70f87b0d1d2e71c.png';
 
 interface HeaderBarProps {
   telemetry: DeviceTelemetry;
