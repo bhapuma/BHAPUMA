@@ -38,7 +38,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ onClose, onOpenAvyan }) 
           </h3>
           <p className="text-sm text-cyan-300 font-semibold mb-1">Bharat Pun Magar</p>
           <span className="text-xs text-zinc-400">
-            17-Year-Old Advanced Android AI Voice Assistant (भपुम)
+            17-Year-Old Advanced Android Voice AI & Shikshya AI (भपुम)
           </span>
 
           <button
@@ -88,19 +88,19 @@ export const AboutModal: React.FC<AboutModalProps> = ({ onClose, onOpenAvyan }) 
         <div className="space-y-2.5 text-xs text-zinc-300 mb-5">
           <div className="flex items-start gap-2">
             <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-            <span><strong>प्राकृतिक नेपाली भाषा:</strong> पूर्वनिर्धारित रूपमा शुद्ध, आत्मीय र स्पष्ट नेपाली आवाज।</span>
+            <span><strong>शिक्षा एआई (Shikshya AI):</strong> गणित, विज्ञान, नेपाली व्याकरण, अंग्रेजी र लोकसेवाको पूर्ण शिक्षक क्षमता।</span>
           </div>
           <div className="flex items-start gap-2">
             <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-            <span><strong>आवाज-पहिलो (Voice-First):</strong> शून्य-स्पर्श (Zero-Touch) र स्थानीय वेक-वर्ड "BHAPUMA" / "भपुम"।</span>
+            <span><strong>नेपाल र विश्व ज्ञान (A to Z):</strong> भूगोल, इतिहास, हिमाल, नदी, प्रदेश, संविधान र विश्व ब्रह्माण्डको सम्पूर्ण ज्ञान।</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+            <span><strong>प्राकृतिक नेपाली बोली:</strong> शुद्ध, आत्मीय र उच्च गतिको स्पष्ट नेपाली आवाज।</span>
           </div>
           <div className="flex items-start gap-2">
             <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
             <span><strong>यन्त्र नियन्त्रण:</strong> कल पुष्टि, SMS, WhatsApp, YouTube, भोल्युम र फ्ल्यासलाइटको पूर्ण नियन्त्रण।</span>
-          </div>
-          <div className="flex items-start gap-2">
-            <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-            <span><strong>अफलाइन मोड:</strong> इन्टरनेट नहुँदा पनि यन्त्रका सबै स्थानीय कामहरू सम्पन्न गर्छ।</span>
           </div>
         </div>
 

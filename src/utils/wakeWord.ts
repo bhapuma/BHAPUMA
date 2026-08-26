@@ -55,9 +55,9 @@ class WakeWordDetector {
 
             const currentText = (finalTranscript || interimTranscript).trim().toLowerCase();
 
-            // Check for Wake words: भरत, भपुम, ह्याकर, कम्प्युटर
+            // Check for Wake words: भरत, भपुम, ह्याकर, कम्प्युटर, गुरु, सर, शिक्षक
             const wakePhrases = [
-              'भरत', 'हे भरत', 'भरत सुन', 'सुन भरत', 'ओई भरत', 'नमस्ते भरत',
+              'भरत', 'हे भरत', 'भरत सुन', 'सुन भरत', 'ओई भरत', 'नमस्ते भरत', 'भरत भाइ', 'भरत भाई',
               'bharat', 'hey bharat', 'bharat sun', 'oi bharat', 'bharat pun', 'bharat pun magar',
               'भपुम', 'भपुमा', 'हे भपुम', 'भपुम सुन', 'सुन भपुम', 'ओई भपुम', 'नमस्ते भपुम',
               'bhapuma', 'bhapumaa', 'bhapum', 'bha puma', 'hey bhapuma', 'hey bhapum',
@@ -65,6 +65,8 @@ class WakeWordDetector {
               'hacker', 'hey hacker', 'hyakar', 'hacker sun',
               'कम्प्युटर', 'हे कम्प्युटर', 'कम्प्युटर सुन', 'सुन कम्प्युटर', 'ओई कम्प्युटर', 'नमस्ते कम्प्युटर',
               'computer', 'hey computer', 'kampyutar', 'computer sun',
+              'गुरु', 'हे गुरु', 'गुरुजी', 'सर', 'हे सर', 'शिक्षक', 'मास्टर', 'teacher', 'hey teacher', 'master',
+              'साथी', 'हे साथी', 'एआई', 'ai', 'hey ai',
               'zoya', 'जोया',
             ];
 
