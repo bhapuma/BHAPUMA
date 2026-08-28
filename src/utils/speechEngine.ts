@@ -35,6 +35,19 @@ class SpeechEngine {
       if (this.synth.onvoiceschanged !== undefined) {
         this.synth.onvoiceschanged = () => this.loadVoices();
       }
+      // Auto unlock audio on any initial user touch/click
+      const unlockAudio = () => {
+        this.initAudioContext();
+        if (this.synth) {
+          if (this.synth.paused) {
+            try { this.synth.resume(); } catch {}
+          }
+        }
+        window.removeEventListener('click', unlockAudio);
+        window.removeEventListener('touchstart', unlockAudio);
+      };
+      window.addEventListener('click', unlockAudio, { passive: true });
+      window.addEventListener('touchstart', unlockAudio, { passive: true });
     }
   }
 
@@ -258,7 +271,21 @@ class SpeechEngine {
       };
 
       if (this.synth) {
-        this.synth.speak(utterance);
+        try {
+          if (this.synth.paused) {
+            this.synth.resume();
+          }
+          this.synth.speak(utterance);
+          // Android Chrome / WebView speech watchdog fix (resumes synth if paused in background)
+          if (this.synth.paused) {
+            this.synth.resume();
+          }
+        } catch (e) {
+          console.warn('Synth speak error:', e);
+          resolve();
+        }
+      } else {
+        resolve();
       }
     });
   }

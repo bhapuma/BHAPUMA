@@ -46,11 +46,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const updated = { ...voiceSettings, pitch, rate, voiceStyle: style };
     setVoiceSettings(updated);
     speechEngine.updateVoiceSettings(updated);
-    speechEngine.speak('नमस्ते दाजु! म भपुम, तपाईंको स्मार्ट असिस्टेन्ट तयार छु!');
+    speechEngine.speak('नमस्ते! म भपुम, तपाईंको स्मार्ट असिस्टेन्ट तयार छु!');
   };
 
   const testTeenagerVoice = () => {
-    speechEngine.speak('नमस्ते भरत दाजु! म भपुम, तपाईंको स्मार्ट एआई असिस्टेन्ट। म सुन्दैछु, आज्ञा गर्नुहोस्!');
+    speechEngine.speak('नमस्ते भरत! म भपुम, तपाईंको स्मार्ट एआई असिस्टेन्ट। म सुन्दैछु, आज्ञा गर्नुहोस्!');
   };
 
   return (

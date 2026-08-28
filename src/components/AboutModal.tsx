@@ -1,8 +1,8 @@
 import React from 'react';
 import { X, Sparkles, ExternalLink, ShieldCheck, Heart, User, CheckCircle } from 'lucide-react';
 
-const BHAPUMA_NEON_ICON_URL = 'https://i.postimg.cc/ry98qSYd/file-0000000039f48208a70f87b0d1d2e71c.png';
-const AVYAN_PROFILE_AVATAR_URL = 'https://i.postimg.cc/ry98qSYd/file-0000000039f48208a70f87b0d1d2e71c.png';
+const BHARAT_AVATAR_URL = 'https://i.postimg.cc/ry98qSYd/file-0000000039f48208a70f87b0d1d2e71c.png';
+const AVYAN_PHOTO_URL = 'https://i.postimg.cc/NM3bpncb/d4595745d5fa611b8f8da9861b2cf43d-0.webp';
 
 interface AboutModalProps {
   onClose: () => void;
@@ -27,7 +27,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ onClose, onOpenAvyan }) 
         <div className="flex flex-col items-center text-center p-4 rounded-2xl bg-gradient-to-b from-cyan-950/30 to-black border border-cyan-500/20 mb-4">
           <div className="w-20 h-20 rounded-full p-[2px] bg-gradient-to-tr from-cyan-400 via-indigo-500 to-amber-400 shadow-[0_0_25px_rgba(6,182,212,0.4)] mb-3">
             <img
-              src={AVYAN_PROFILE_AVATAR_URL}
+              src={BHARAT_AVATAR_URL}
               alt="Bharat Pun Magar (BHAPUMA)"
               referrerPolicy="no-referrer"
               className="w-full h-full object-cover rounded-full"
@@ -43,10 +43,18 @@ export const AboutModal: React.FC<AboutModalProps> = ({ onClose, onOpenAvyan }) 
 
           <button
             onClick={onOpenAvyan}
-            className="mt-3.5 px-4 py-2 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-xs font-bold flex items-center gap-1.5 transition-all"
+            className="mt-3.5 px-4 py-2 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-xs font-bold flex items-center gap-2 transition-all group"
           >
+            <div className="w-5 h-5 rounded-full overflow-hidden border border-cyan-400/60 shrink-0">
+              <img
+                src={AVYAN_PHOTO_URL}
+                alt="Avyan"
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-cover"
+              />
+            </div>
             <span>Bharat Pun Magar — AVYAN Profile</span>
-            <ExternalLink className="w-3.5 h-3.5" />
+            <ExternalLink className="w-3.5 h-3.5 ml-auto" />
           </button>
         </div>
 

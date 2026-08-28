@@ -260,6 +260,42 @@ export default function App() {
     await speechEngine.speak(text);
   }, []);
 
+  // Automatic Welcome Greeting on App Startup
+  useEffect(() => {
+    const welcomeGreeting = "नमस्ते भरत! भपुम एआईमा स्वागत छ। भन्नुहोस्, आज म के मद्दत गरूँ?";
+    setLastAssistantResponse(welcomeGreeting);
+    setSpokenFeedback(welcomeGreeting);
+
+    let hasSpoken = false;
+    const playGreeting = async () => {
+      if (hasSpoken) return;
+      hasSpoken = true;
+      speechEngine.initAudioContext();
+      await respondWithVoice(welcomeGreeting);
+    };
+
+    // Immediate attempt after 500ms startup delay
+    const initialTimer = setTimeout(() => {
+      playGreeting().catch(() => {});
+    }, 500);
+
+    // Fallback gesture listener in case browser autoplay blocks initial audio
+    const onUserInteraction = () => {
+      playGreeting();
+      window.removeEventListener('click', onUserInteraction);
+      window.removeEventListener('touchstart', onUserInteraction);
+    };
+
+    window.addEventListener('click', onUserInteraction, { passive: true });
+    window.addEventListener('touchstart', onUserInteraction, { passive: true });
+
+    return () => {
+      clearTimeout(initialTimer);
+      window.removeEventListener('click', onUserInteraction);
+      window.removeEventListener('touchstart', onUserInteraction);
+    };
+  }, [respondWithVoice]);
+
   // Tool Call Execution Engine on Client
   const executeDeviceTool = useCallback(
     async (toolName: string, args: Record<string, any>): Promise<string> => {
@@ -531,7 +567,7 @@ export default function App() {
         }
 
         if (!replyText) {
-          replyText = 'हजुर दाजु, मैले तपाईंको कुरा बुझें। म तपाईंलाई थप के सहयोग गरूँ?';
+          replyText = 'हजुर, मैले तपाईंको कुरा बुझें। म तपाईंलाई थप के सहयोग गरूँ?';
         }
 
         // Save conversation history
@@ -543,7 +579,7 @@ export default function App() {
       } catch (err: any) {
         console.warn('Real-time query fallback to instant natural Nepali response:', err);
         setAssistantState('ERROR');
-        const fallbackText = 'नमस्ते दाजु! तपाईंको प्रश्न बुझें। इन्टरनेट वा एआई सर्भरमा केही ढिलाइ भए पनि म तपाईंको सेवामा तयार छु। केही नयाँ सोध्नुहोस् त!';
+        const fallbackText = 'नमस्ते! तपाईंको प्रश्न बुझें। इन्टरनेट वा एआई सर्भरमा केही ढिलाइ भए पनि म तपाईंको सेवामा तयार छु। केही नयाँ सोध्नुहोस् त!';
         setLastAssistantResponse(fallbackText);
         await respondWithVoice(fallbackText);
       }
